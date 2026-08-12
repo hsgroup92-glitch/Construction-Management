@@ -12,6 +12,10 @@ st.set_page_config(
 USERS_FILE = "users_v3.json"
 FILES_FILE = "files_db.json"
 
+# إنشاء مجلد لصور البروفايل إذا لم يكن موجوداً
+if not os.path.exists("avatars"):
+    os.makedirs("avatars")
+
 def init_users():
     if not os.path.exists(USERS_FILE):
         default_users = {
@@ -74,16 +78,25 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
+    # لوجو الشركة في القائمة الجانبية (إن وجد ملف logo.png)
+    if os.path.exists("logo.png"):
+        st.sidebar.image("logo.png", use_container_width=True)
+
     st.sidebar.markdown(f"### أهلاً بك، {current_user}")
     st.sidebar.markdown(f"**الوظيفة:** {user_data['title']}")
     
-    avatar_input = st.sidebar.text_input("رابط صورة البروفايل (Avatar URL)", value=user_data.get("avatar", ""))
-    if avatar_input != user_data.get("avatar", ""):
-        users[current_user]["avatar"] = avatar_input
+    # رفع صورة البروفايل من الجهاز
+    uploaded_avatar = st.sidebar.file_uploader("تحديث صورة البروفايل", type=['jpg', 'png', 'jpeg'])
+    if uploaded_avatar is not None:
+        avatar_path = f"avatars/{current_user}.png"
+        with open(avatar_path, "wb") as f:
+            f.write(uploaded_avatar.getbuffer())
+        users[current_user]["avatar"] = avatar_path
         save_users(users)
-        st.sidebar.success("تم تحديث صورة البروفايل!")
+        st.sidebar.success("تم تحديث صورة البروفايل بنجاح!")
 
-    if user_data.get("avatar"):
+    # عرض الصورة الحالية إن وجدت
+    if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
         st.sidebar.image(user_data["avatar"], width=100)
 
     if st.sidebar.button("تسجيل الخروج"):
@@ -101,19 +114,20 @@ else:
         all_files = load_files()
         
         if role == "Accountant":
-            filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target") == "الكل"]
+            filtered_files = [f for f in all_files if "المحاسب" in f.get("target", []) or "الكل" in f.get("target", [])]
         elif role == "Site Engineer":
-            filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
+            filtered_files = [f for f in all_files if f.get("uploader") == current_user or current_user in f.get("target", [])]
         else:
             filtered_files = all_files
 
         st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
         for idx, file_info in enumerate(filtered_files):
+            targets_str = ", ".join(file_info.get('target', [])) if isinstance(file_info.get('target'), list) else file_info.get('target')
             with st.expander(f"📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    st.write(f"**موجه إلى:** {file_info.get('target')}")
+                    st.write(f"**موجه إلى:** {targets_str}")
                     st.write(f"**تاريخ الرفع:** {file_info.get('date')}")
                     st.write(f"**نوع الملف:** {file_info.get('file_type', 'مستند')}")
                 with col_b:
@@ -163,18 +177,19 @@ else:
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
         
         file_title = st.text_input("عنوان الملف / المستند")
-        target_person = st.selectbox("موجه إلى الشخص/القسم", ["الكل", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
+        # اختيار أكثر من شخص أو قسم باستخدام multiselect
+        target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
 
         if st.button("رفع الملف وإرساله للنظام", use_container_width=True):
-            if file_title and uploaded_file:
+            if file_title and uploaded_file and target_persons:
                 all_files = load_files()
                 file_bytes = uploaded_file.getvalue()
                 
                 new_entry = {
                     "title": file_title,
-                    "target": target_person,
+                    "target": target_persons,
                     "status": initial_status,
                     "uploader": current_user,
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -189,22 +204,28 @@ else:
                 save_files(all_files)
                 st.success("تم رفع الملف بنجاح وإتاحته في النظام!")
             else:
-                st.warning("يرجى كتابة عنوان الملف وإرفاق الملف المطلوب.")
+                st.warning("يرجى كتابة عنوان الملف، اختيار الجهة الموجه لها الملف، وإرفاق الملف المطلوب.")
 
     elif choice == "إعدادات الصلاحيات":
         st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
+        
+        # السماح لكل المستخدمين بتغيير كلمات مرورهم، وللمدير التنفيذي بتغيير كلمات مرور الجميع
         if role == "CEO":
             st.info("بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
-            
-            for uname, udata in users.items():
-                with st.expander(f"مستخدم: {uname} ({udata['title']})"):
-                    new_pass = st.text_input(f"كلمة المرور الجديدة لـ {uname}", value=udata["password"], key=f"pass_{uname}")
-                    new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}")
-                    
-                    if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
-                        users[uname]["password"] = new_pass
-                        users[uname]["title"] = new_title
-                        save_users(users)
-                        st.success(f"تم تحديث بيانات {uname} بنجاح!")
+            target_edit_users = users.keys()
         else:
-            st.warning("هذه الصفحة مخصصة للمدير التنفيذي (CEO) فقط.")
+            st.info("يمكنك تعديل كلمة المرور الخاصة بحسابك الشخصي.")
+            target_edit_users = [current_user]
+
+        for uname in target_edit_users:
+            udata = users[uname]
+            with st.expander(f"مستخدم: {uname} ({udata['title']})"):
+                new_pass = st.text_input(f"كلمة المرور لـ {uname}", value=udata["password"], type="password", key=f"pass_{uname}")
+                new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}", disabled=(role != "CEO"))
+                
+                if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
+                    users[uname]["password"] = new_pass
+                    if role == "CEO":
+                        users[uname]["title"] = new_title
+                    save_users(users)
+                    st.success(f"تم تحديث بيانات {uname} بنجاح!")
