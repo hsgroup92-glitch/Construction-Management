@@ -110,13 +110,12 @@ else:
         all_files = load_files()
         
         # تصفية الملفات حسب الصلاحية
-        if role == "Accountant":
-            # المحاسب يرى المستندات الموجهة له أو العامة
-            filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target"] == "الكل"]
-        elif role == "Site Engineer":
-            filtered_files = [f for f in all_files if f.get("uploader"] == current_user or f.get("target") == current_user]
-        else:
-            filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
+if role == "Accountant":
+    filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target"] == "الكل"]
+elif role == "Site Engineer":
+    filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
+else:
+    filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
 
         st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
