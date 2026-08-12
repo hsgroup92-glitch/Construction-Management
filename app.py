@@ -93,20 +93,20 @@ if "logged_in" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
-# دالة بحث مرنة عن الصورة بأي امتداد وفي أي مسار قريب
-def find_image():
-    for name in ["logo.png", "logo.jpg", "logo.jpeg", "company_profile.png"]:
-        if os.path.exists(name):
-            return name
+# دالة ذكية للبحث عن أي صورة لوجو وتحميلها صح
+def get_logo():
+    for filename in ["logo.png", "logo.jpg", "logo.jpeg", "company_profile.png"]:
+        if os.path.exists(filename):
+            return filename
     return None
 
-img_path = find_image()
+logo_file = get_logo()
 
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if img_path:
-            st.image(img_path, use_container_width=True)
+        if logo_file:
+            st.image(logo_file, use_container_width=True)
             
         st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
         st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
@@ -126,8 +126,8 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    if img_path:
-        st.sidebar.image(img_path, use_container_width=True)
+    if logo_file:
+        st.sidebar.image(logo_file, use_container_width=True)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
