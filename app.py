@@ -9,31 +9,39 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المخصص للهوية البصرية للشركات الهندسية ---
+# --- تنسيق الـ CSS المحدث (ألوان أفتح وأكثر راحة للعين) ---
 st.markdown("""
     <style>
+    /* خلفية التطبيق العامة أصبحت أفتح ونظيفة جداً */
     .stApp {
-        background-color: #f4f5f7;
+        background-color: #f8fafc;
     }
+    
+    /* القائمة الجانبية أصبحت بلون رمادي متوسط ودافيء بدل الأسود الغامق */
     [data-testid="stSidebar"] {
-        background-color: #1a1a1a;
+        background-color: #2b3e50;
         color: #ffffff;
     }
+    
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
+    
+    /* تنسيق الأزرار بلون أفتح وأكثر حيوية */
     div.stButton > button {
         border-radius: 6px;
-        border: 1px solid #333333;
-        background-color: #262626;
+        border: 1px solid #cbd5e1;
+        background-color: #34495e;
         color: white;
         font-weight: 600;
         transition: all 0.3s ease;
     }
+    
     div.stButton > button:hover {
-        background-color: #404040;
-        border: 1px solid #555555;
+        background-color: #4e6d8c;
+        border: 1px solid #94a3b8;
     }
+    
     h1, h2, h3 {
         color: #1e293b;
     }
@@ -108,9 +116,7 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- الترتيب الاحترافي للقائمة الجانبية ---
-    
-    # 1. اللوجو في أعلى القائمة تماماً
+    # 1. اللوجو في أعلى القائمة
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
     else:
@@ -124,13 +130,13 @@ else:
 
     st.sidebar.markdown("---")
 
-    # 3. القائمة الرئيسية للتنقل (عشان تكون واظحة ومتاحة فوراً تحت البيانات)
+    # 3. القائمة الرئيسية للتنقل
     menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
 
     st.sidebar.markdown("---")
 
-    # 4. إعدادات الحساب الشخصي (تحديث الصورة والبروفايل في الأسفل)
+    # 4. إعدادات الحساب الشخصي
     with st.sidebar.expander("⚙️ إعدادات الحساب والصورة"):
         if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
             st.image(user_data["avatar"], width=80)
@@ -145,8 +151,8 @@ else:
             st.success("تم التحديث!")
             st.rerun()
 
-    # 5. زر تسجيل الخروج في قاع القائمة الجانبية
-    if st.sidebar.button("🚪 تسجيل الخروج", use_center_width=True):
+    # 5. زر تسجيل الخروج
+    if st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
