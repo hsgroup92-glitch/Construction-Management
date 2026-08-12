@@ -42,6 +42,7 @@ st.markdown("""
 
 USERS_FILE = "users_v3.json"
 FILES_FILE = "files_db.json"
+FOLDERS_FILE = "folders_db.json"
 
 if not os.path.exists("avatars"):
     os.makedirs("avatars")
@@ -80,8 +81,24 @@ def save_files(files):
     with open(FILES_FILE, "w", encoding="utf-8") as f:
         json.dump(files, f, ensure_ascii=False, indent=4)
 
+def init_folders():
+    if not os.path.exists(FOLDERS_FILE):
+        default_folders = ["المستندات العامة", "الحسابات والماليات", "رسومات الشوب دروينج", "عروض الأسعار"]
+        with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(default_folders, f, ensure_ascii=False, indent=4)
+
+def load_folders():
+    init_folders()
+    with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_folders(folders):
+    with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(folders, f, ensure_ascii=False, indent=4)
+
 users = load_users()
 files_db = load_files()
+folders_db = load_folders()
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -135,7 +152,7 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.markdown("📂 **القائمة الرئيسية**")
     
-    pages = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
+    pages = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إدارة الفولدرات", "إعدادات الصلاحيات"]
     
     for page in pages:
         button_label = f"📍 {page}" if st.session_state.current_page == page else f"📁 {page}"
@@ -169,6 +186,7 @@ else:
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
         all_files = load_files()
+        folders = load_folders()
         
         if role == "Accountant":
             filtered_files = [f for f in all_files if "المحاسب" in f.get("target", []) or "الكل" in f.get("target", [])]
@@ -177,13 +195,19 @@ else:
         else:
             filtered_files = all_files
 
+        selected_folder_filter = st.selectbox("📂 تصفية حسب الفولدر", ["الكل"] + folders)
+        if selected_folder_filter != "الكل":
+            filtered_files = [f for f in filtered_files if f.get("folder", "المستندات العامة") == selected_folder_filter]
+
         st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
         for idx, file_info in enumerate(filtered_files):
             targets_str = ", ".join(file_info.get('target', [])) if isinstance(file_info.get('target'), list) else file_info.get('target')
-            with st.expander(f"📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
+            folder_name = file_info.get('folder', 'المستندات العامة')
+            with st.expander(f"📁 [{folder_name}] 📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
                 col_a, col_b = st.columns(2)
                 with col_a:
+                    st.write(f"**الفولدر:** {folder_name}")
                     st.write(f"**موجه إلى:** {targets_str}")
                     st.write(f"**تاريخ الرفع:** {file_info.get('date')}")
                     st.write(f"**نوع الملف:** {file_info.get('file_type', 'مستند')}")
@@ -244,6 +268,9 @@ else:
 
     elif choice == "إدارة الملفات الجديدة":
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
+        folders = load_folders()
+        
+        selected_folder = st.selectbox("اختر الفولدر المخصص للملف", folders)
         file_title = st.text_input("عنوان الملف / المستند")
         target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
@@ -255,6 +282,7 @@ else:
                 file_bytes = uploaded_file.getvalue()
                 new_entry = {
                     "title": file_title,
+                    "folder": selected_folder,
                     "target": target_persons,
                     "status": initial_status,
                     "uploader": current_user,
@@ -267,9 +295,51 @@ else:
                 }
                 all_files.append(new_entry)
                 save_files(all_files)
-                st.success("تم رفع الملف بنجاح وإتاحته في النظام!")
+                st.success("تم رفع الملف بنجاح وإتاحته في الفولدر المخصص!")
             else:
                 st.warning("يرجى كتابة عنوان الملف، اختيار الجهة الموجه لها الملف، وإرفاق الملف المطلوب.")
+
+    elif choice == "إدارة الفولدرات":
+        st.title("📁 إدارة الفولدرات (إنشاء وتعديل وتسمية)")
+        folders = load_folders()
+        
+        st.subheader("➕ إنشاء فولدر جديد")
+        new_folder_name = st.text_input("اسم الفولدر الجديد")
+        if st.button("إضافة الفولدر"):
+            if new_folder_name and new_folder_name not in folders:
+                folders.append(new_folder_name)
+                save_folders(folders)
+                st.success(f"تم إنشاء الفولدر '{new_folder_name}' بنجاح!")
+                st.rerun()
+            elif new_folder_name in folders:
+                st.warning("هذا الفولدر موجود مسبقاً.")
+            else:
+                st.warning("يرجى إدخال اسم صحيح للفولدر.")
+        
+        st.markdown("---")
+        st.subheader("✏️ تعديل أو إعادة تسمية الفولدرات الحالية")
+        for i, f_name in enumerate(folders):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                updated_name = st.text_input(f"تعديل اسم الفولدر {i+1}", value=f_name, key=f"folder_input_{i}")
+            with col2:
+                st.write("")
+                st.write("")
+                if st.button("حفظ التعديل", key=f"save_folder_{i}"):
+                    if updated_name and updated_name not in folders:
+                        old_name = folders[i]
+                        folders[i] = updated_name
+                        save_folders(folders)
+                        
+                        # تحديث الفولدر في الملفات المرتبطة به أيضاً
+                        all_files = load_files()
+                        for file_item in all_files:
+                            if file_item.get("folder") == old_name:
+                                file_item["folder"] = updated_name
+                        save_files(all_files)
+                        
+                        st.success("تم تعديل اسم الفولدر بنجاح!")
+                        st.rerun()
 
     elif choice == "إعدادات الصلاحيات":
         st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
