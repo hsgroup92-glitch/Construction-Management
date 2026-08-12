@@ -44,7 +44,7 @@ if "current_page" not in st.session_state:
 
 # دالة عرض اللوجو الذكية والآمنة 100%
 def display_logo(is_sidebar=False):
-    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.jpg.png")
     
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
