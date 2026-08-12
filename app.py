@@ -111,13 +111,13 @@ else:
         
         # تصفية الملفات حسب الصلاحية
 if role == "Accountant":
-    filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target") == "الكل"]
-elif role == "Site Engineer":
-    filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
-else:
-    filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
+        filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target") == "الكل"]
+    elif role == "Site Engineer":
+        filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
+    else:
+        filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
 
-        st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
+    st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
         for idx, file_info in enumerate(filtered_files):
             with st.expander(f"📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
