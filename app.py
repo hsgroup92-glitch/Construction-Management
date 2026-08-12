@@ -94,16 +94,17 @@ if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
 if not st.session_state.logged_in:
-    if os.path.exists("logo.png"):
-        st.image("logo.png", use_container_width=True)
-    elif os.path.exists("company_profile.png"):
-        st.image("company_profile.png", use_container_width=True)
-    
-    st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
-    
+    # --- عرض اللوجو في شاشة تسجيل الدخول داخل عمود المنتصف ---
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        if os.path.exists("logo.png"):
+            st.image("logo.png", use_container_width=True)
+        elif os.path.exists("company_profile.png"):
+            st.image("company_profile.png", use_container_width=True)
+            
+        st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
+        st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
+        
         selected_user = st.selectbox("اختر المستخدم", list(users.keys()))
         password = st.text_input("كلمة المرور", type="password")
         
@@ -119,7 +120,7 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- عرض اللوجو أو صورة البروفايل في أعلى القائمة الجانبية بضمان قراءتها تلقائياً ---
+    # --- عرض اللوجو في أعلى القائمة الجانبية بعد تسجيل الدخول ---
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
     elif os.path.exists("company_profile.png"):
