@@ -195,11 +195,21 @@ else:
                         save_files(all_files)
                     st.write(f"👀 **شوهد بواسطة:** {', '.join(viewed_by) if viewed_by else 'لا أحد بعد'}")
 
-                if file_info.get("file_data"):
+               if file_info.get("file_data"):
+                    file_bytes = bytes.fromhex(file_info["file_data"])
                     if file_info.get("file_type") in ["image/png", "image/jpeg", "image/jpg"]:
-                        st.image(file_info["file_data"], caption=file_info.get('title'), use_container_width=True)
+                        st.image(file_bytes, caption=file_info.get('title'), use_container_width=True)
                     elif file_info.get("file_type") in ["video/mp4", "video/mov"]:
-                        st.video(file_info["file_data"])
+                        st.video(file_bytes)
+                    
+                    # زر تحميل الملف أيا كانت صيغته (PDF, Excel, Word...)
+                    st.download_button(
+                        label=f"📥 تحميل الملف الأصلي: {file_info.get('file_name', 'document')}",
+                        data=file_bytes,
+                        file_name=file_info.get('file_name', 'file'),
+                        mime=file_info.get('file_type', 'application/octet-stream'),
+                        key=f"download_{idx}"
+                    )
 
                 st.markdown("---")
                 st.markdown("💬 **التعليقات:**")
