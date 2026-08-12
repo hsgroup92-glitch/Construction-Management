@@ -3,18 +3,15 @@ import json
 import streamlit as st
 from datetime import datetime
 
-# إعدادات صفحة التطبيق
-st.set_page_title_page_config = st.set_page_config(
+st.set_page_config(
     page_title="نظام إدارة مستندات المشاريع",
     page_icon="🏗️",
     layout="wide"
 )
 
-# ملفات تخزين البيانات محلياً
 USERS_FILE = "users.json"
 FILES_FILE = "files_db.json"
 
-# تهيئة بيانات المستخدمين الافتراضية مع الصلاحيات والأسماء الجديدة
 def init_users():
     if not os.path.exists(USERS_FILE):
         default_users = {
@@ -22,7 +19,7 @@ def init_users():
             "Omar Nour": {"password": "123", "role": "Project Manager", "title": "مدير المشروع", "avatar": ""},
             "Mohamed abd Elazem": {"password": "123", "role": "Site Engineer", "title": "مهندس الموقع", "avatar": ""},
             "Karem Mahmoud": {"password": "123", "role": "Accountant", "title": "المحاسب", "avatar": ""}
-                }
+        }
         with open(USERS_FILE, "w", encoding="utf-8") as f:
             json.dump(default_users, f, ensure_ascii=False, indent=4)
 
@@ -35,7 +32,6 @@ def save_users(users):
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=4)
 
-# تهيئة قاعدة بيانات المستندات
 def init_files():
     if not os.path.exists(FILES_FILE):
         with open(FILES_FILE, "w", encoding="utf-8") as f:
@@ -53,7 +49,6 @@ def save_files(files):
 users = load_users()
 files_db = load_files()
 
-# نظام تسجيل الدخول
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
@@ -79,12 +74,10 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # الشريط الجانبي
     st.sidebar.markdown(f"### أهلاً بك، {current_user}")
-    st.sidebar.markdown(f"**الدظيفة:** {user_data['title']}")
+    st.sidebar.markdown(f"**الوظيفة:** {user_data['title']}")
     
-    # 6. إمكانية إضافة صورة للأكونت
-    avatar_input = st.sidebar.text_input("رابط صورة البروفایل (Avatar URL)", value=user_data.get("avatar", ""))
+    avatar_input = st.sidebar.text_input("رابط صورة البروفايل (Avatar URL)", value=user_data.get("avatar", ""))
     if avatar_input != user_data.get("avatar", ""):
         users[current_user]["avatar"] = avatar_input
         save_users(users)
@@ -102,22 +95,19 @@ else:
     menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     choice = st.sidebar.selectbox("القائمة الرئيسية", menu)
 
-    # 1, 2, 3, 4, 5, 7: لوحة التحكم وعرض الملفات والصلاحيات
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
 
-        # الفلاتر والصلاحيات في الرؤية
         all_files = load_files()
         
-        # تصفية الملفات حسب الصلاحية
-if role == "Accountant":
-        filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target") == "الكل"]
-    elif role == "Site Engineer":
-        filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
-    else:
-        filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
+        if role == "Accountant":
+            filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target") == "الكل"]
+        elif role == "Site Engineer":
+            filtered_files = [f for f in all_files if f.get("uploader") == current_user or f.get("target") == current_user]
+        else:
+            filtered_files = all_files
 
-    st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
+        st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
         for idx, file_info in enumerate(filtered_files):
             with st.expander(f"📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
@@ -127,7 +117,6 @@ if role == "Accountant":
                     st.write(f"**تاريخ الرفع:** {file_info.get('date')}")
                     st.write(f"**نوع الملف:** {file_info.get('file_type', 'مستند')}")
                 with col_b:
-                    # 4. تنبيه على الأشخاص الذين تم رؤية الملفات
                     viewed_by = file_info.get("viewed_by", [])
                     if current_user not in viewed_by and role != "CEO":
                         viewed_by.append(current_user)
@@ -135,7 +124,6 @@ if role == "Accountant":
                         save_files(all_files)
                     st.write(f"👀 **شوهد بواسطة:** {', '.join(viewed_by) if viewed_by else 'لا أحد بعد'}")
 
-                # عرض الصور أو الفيديوهات المرفوعة (7)
                 if file_info.get("file_data"):
                     if file_info.get("file_type") in ["image/png", "image/jpeg", "image/jpg"]:
                         st.image(file_info["file_data"], caption=file_info.get('title'), use_container_width=True)
@@ -143,7 +131,6 @@ if role == "Accountant":
                         st.video(file_info["file_data"])
 
                 st.markdown("---")
-                # 3. تعليقات على الرفع
                 st.markdown("💬 **التعليقات:**")
                 comments = file_info.get("comments", [])
                 for c in comments:
@@ -162,7 +149,6 @@ if role == "Accountant":
                         st.success("تم إضافة التعليق!")
                         st.rerun()
 
-                # تغيير الحالة (لمدير المشروع و CEO ومهندس الموقع)
                 if role in ["CEO", "Project Manager", "Site Engineer"]:
                     new_status = st.selectbox("تحديث حالة الرفع", ["مكتمل", "غير مكتمل", "قيد المراجعة", "يحتاج تعديل"], 
                                               index=["مكتمل", "غير مكتمل", "قيد المراجعة", "يحتاج تعديل"].index(file_info.get("status", "غير مكتمل")), 
@@ -176,23 +162,14 @@ if role == "Accountant":
     elif choice == "إدارة الملفات الجديدة":
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
         
-        # 5. اضافة عنوان للملف فى حاله الرفع
         file_title = st.text_input("عنوان الملف / المستند")
-        
-        # 1. تحديد الأشخاص الموجه لهم رفع المستندات
-        target_person = st.selectbox("موجه إلى الشخص/القسم", ["الكل", "Hassan ElSokary", "مدير المشروع", "مهندس الموقع", "المحاسب"])
-        
-        # 2. حالة الرفع الأولية
+        target_person = st.selectbox("موجه إلى الشخص/القسم", ["الكل", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
-
-        # 7. امكانية رفع صور و فيديوهات ومستندات
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
 
         if st.button("رفع الملف وإرساله للنظام", use_container_width=True):
             if file_title and uploaded_file:
                 all_files = load_files()
-                
-                # حفظ مؤقت للملفات المرفوعة كـ bytes أو مسار
                 file_bytes = uploaded_file.getvalue()
                 
                 new_entry = {
@@ -203,7 +180,7 @@ if role == "Accountant":
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "file_type": uploaded_file.type,
                     "file_name": uploaded_file.name,
-                    "file_data": file_bytes.hex() if file_bytes else "", # حفظ البيانات
+                    "file_data": file_bytes.hex() if file_bytes else "",
                     "comments": [],
                     "viewed_by": []
                 }
@@ -217,7 +194,7 @@ if role == "Accountant":
     elif choice == "إعدادات الصلاحيات":
         st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
         if role == "CEO":
-            st.info(" بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
+            st.info("بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
             
             for uname, udata in users.items():
                 with st.expander(f"مستخدم: {uname} ({udata['title']})"):
