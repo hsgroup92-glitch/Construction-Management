@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المحدث لضمان ظهور النصوص والصناديق بوضوح تام ---
+# --- تنسيق الـ CSS العام ---
 st.markdown("""
     <style>
     .stApp {
@@ -23,26 +23,6 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* تعديل صندوق الاختيار للقائمة الرئيسية ليظهر بوضوح والنص بداخلة لونه أسود داكن */
-    [data-testid="stSidebar"] div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        border-radius: 6px;
-        border: 1px solid #4e6d8c;
-    }
-    [data-testid="stSidebar"] div[data-baseweb="select"] span {
-        color: #0f172a !important;
-        font-weight: 600 !important;
-    }
-    
-    /* لون القائمة المنسدلة عند الفتح */
-    div[data-baseweb="popover"] div {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-    }
-    div[data-baseweb="popover"] span {
-        color: #0f172a !important;
-    }
-
     div.stButton > button {
         border-radius: 6px;
         border: 1px solid #cbd5e1;
@@ -50,11 +30,18 @@ st.markdown("""
         color: white;
         font-weight: 600;
         transition: all 0.3s ease;
+        width: 100%;
     }
     div.stButton > button:hover {
         background-color: #4e6d8c;
         border: 1px solid #94a3b8;
     }
+    
+    /* تنسيق زر الصفحة النشطة الحالية لتكون مميزة */
+    .active-btn {
+        background-color: #1abc9c !important;
+    }
+    
     h1, h2, h3 {
         color: #1e293b;
     }
@@ -108,6 +95,9 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
 
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "لوحة التحكم والمستندات"
+
 if not st.session_state.logged_in:
     if os.path.exists("company_profile.png"):
         st.image("company_profile.png", use_container_width=True)
@@ -132,7 +122,7 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- عرض صورة الشركة أو البروفايل في أعلى القائمة الجانبية في كل الصفحات ---
+    # --- عرض صورة الشركة أو البروفايل في أعلى القائمة الجانبية ---
     if os.path.exists("company_profile.png"):
         st.sidebar.image("company_profile.png", use_container_width=True)
     elif os.path.exists("logo.png"):
@@ -148,9 +138,17 @@ else:
 
     st.sidebar.markdown("---")
 
-    # القائمة الرئيسية للتنقل
-    menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
-    choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
+    # --- القائمة الرئيسية المصممة بالأزرار (تظهر الاختيارات بوضوح تام ودون أي مربعات بيضاء فارغة) ---
+    st.sidebar.markdown("📂 **القائمة الرئيسية**")
+    
+    pages = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
+    
+    for page in pages:
+        # تمييز الزر الحالي بلون مختلف لو هو الصفحة المفتوحة
+        button_label = f"📍 {page}" if st.session_state.current_page == page else f"📁 {page}"
+        if st.sidebar.button(button_label, key=f"btn_{page}", use_container_width=True):
+            st.session_state.current_page = page
+            st.rerun()
 
     st.sidebar.markdown("---")
 
@@ -175,7 +173,9 @@ else:
         st.session_state.username = ""
         st.rerun()
 
-    # --- محتوى الصفحات الرئيسي ---
+    # --- محتوى الصفحات الرئيسي بناءً على الاختيار ---
+    choice = st.session_state.current_page
+
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
 
@@ -290,7 +290,7 @@ else:
                 new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}", disabled=(role != "CEO"))
                 
                 if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
-                    users[uname]["password"] = new_pass  # تم التصحيح هنا
+                    users[uname]["password"] = new_pass
                     if role == "CEO":
                         users[uname]["title"] = new_title
                     save_users(users)
