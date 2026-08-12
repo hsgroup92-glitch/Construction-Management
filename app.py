@@ -22,7 +22,7 @@ def init_users():
             "Omar Nour": {"password": "123", "role": "Project Manager", "title": "مدير المشروع", "avatar": ""},
             "Mohamed abd Elazem": {"password": "123", "role": "Site Engineer", "title": "مهندس الموقع", "avatar": ""},
             "Karem Mahmoud": {"password": "123", "role": "Accountant", "title": "المحاسب", "avatar": ""}
-        }        }
+                }
         with open(USERS_FILE, "w", encoding="utf-8") as f:
             json.dump(default_users, f, ensure_ascii=False, indent=4)
 
