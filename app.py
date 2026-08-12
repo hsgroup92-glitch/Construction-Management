@@ -134,7 +134,7 @@ if not st.session_state.logged_in:
                 st.error("كلمة المرور غير صحيحة")
 else:
     current_user = st.session_state.username
-    user_data = users[current_user]
+    user_data = users.get(current_user, {"role": "Staff", "title": "موظف"})
     role = user_data["role"]
 
     if os.path.exists("logo.jpg.png"):
@@ -269,10 +269,11 @@ else:
     elif choice == "إدارة الملفات الجديدة":
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
         folders = load_folders()
+        active_users = list(users.keys())
         
         selected_folder = st.selectbox("اختر الفولدر المخصص للملف", folders)
         file_title = st.text_input("عنوان الملف / المستند")
-        target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
+        target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب"] + active_users)
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
 
@@ -331,7 +332,6 @@ else:
                         folders[i] = updated_name
                         save_folders(folders)
                         
-                        # تحديث الفولدر في الملفات المرتبطة به أيضاً
                         all_files = load_files()
                         for file_item in all_files:
                             if file_item.get("folder") == old_name:
@@ -342,23 +342,62 @@ else:
                         st.rerun()
 
     elif choice == "إعدادات الصلاحيات":
-        st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
+        st.title("⚙️ إدارة صلاحيات المستخدمين وحذفهم")
+        
         if role == "CEO":
-            st.info("بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
-            target_edit_users = users.keys()
+            st.info("بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات المستخدمين، كلمات المرور، حذف مستخدم، أو إضافة مستخدم جديد.")
+            
+            st.subheader("➕ إضافة مستخدم جديد للنظام")
+            new_u_name = st.text_input("اسم المستخدم الجديد (الاسم الكامل)")
+            new_u_pass = st.text_input("كلمة المرور", type="password")
+            new_u_title = st.text_input("المسمى الوظيفي (مثال: محاسب، مهندس...)")
+            new_u_role = st.selectbox("الدور في النظام", ["CEO", "Project Manager", "Site Engineer", "Accountant"])
+            
+            if st.button("إضافة المستخدم الجديد"):
+                if new_u_name and new_u_pass:
+                    if new_u_name in users:
+                        st.warning("هذا المستخدم موجود مسبقاً.")
+                    else:
+                        users[new_u_name] = {
+                            "password": new_u_pass,
+                            "role": new_u_role,
+                            "title": new_u_title if new_u_title else new_u_role,
+                            "avatar": ""
+                        }
+                        save_users(users)
+                        st.success(f"تم إضافة المستخدم '{new_u_name}' بنجاح!")
+                        st.rerun()
+                else:
+                    st.warning("يرجى إدخال اسم المستخدم وكلمة المرور.")
+            
+            st.markdown("---")
+            st.subheader("👥 تعديل أو حذف المستخدمين الحاليين")
+            for uname in list(users.keys()):
+                udata = users[uname]
+                with st.expander(f"مستخدم: {uname} ({udata['title']})"):
+                    new_pass = st.text_input(f"كلمة المرور لـ {uname}", value=udata["password"], type="password", key=f"pass_{uname}")
+                    new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}")
+                    
+                    col_del1, col_del2 = st.columns(2)
+                    with col_del1:
+                        if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
+                            users[uname]["password"] = new_pass
+                            users[uname]["title"] = new_title
+                            save_users(users)
+                            st.success(f"تم تحديث بيانات {uname} بنجاح!")
+                            st.rerun()
+                    with col_del2:
+                        if uname != current_user: # منع المدير من حذف نفسه بالخطأ
+                            if st.button(f"🗑️ حذف المستخدم {uname}", key=f"del_{uname}"):
+                                del users[uname]
+                                save_users(users)
+                                st.warning(f"تم حذف المستخدم {uname} بنجاح!")
+                                st.rerun()
         else:
             st.info("يمكنك تعديل كلمة المرور الخاصة بحسابك الشخصي.")
-            target_edit_users = [current_user]
-
-        for uname in target_edit_users:
-            udata = users[uname]
-            with st.expander(f"مستخدم: {uname} ({udata['title']})"):
-                new_pass = st.text_input(f"كلمة المرور لـ {uname}", value=udata["password"], type="password", key=f"pass_{uname}")
-                new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}", disabled=(role != "CEO"))
-                
-                if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
-                    users[uname]["password"] = new_pass
-                    if role == "CEO":
-                        users[uname]["title"] = new_title
-                    save_users(users)
-                    st.success(f"تم تحديث بيانات {uname} بنجاح!")
+            udata = users[current_user]
+            new_pass = st.text_input("كلمة المرور الجديدة", value=udata["password"], type="password")
+            if st.button("حفظ كلمة المرور"):
+                users[current_user]["password"] = new_pass
+                save_users(users)
+                st.success("تم تحديث كلمة المرور بنجاح!")
