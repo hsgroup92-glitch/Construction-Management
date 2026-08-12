@@ -4,15 +4,61 @@ import streamlit as st
 from datetime import datetime
 
 st.set_page_config(
-    page_title="نظام إدارة مستندات المشاريع",
+    page_title="HS Construction & Supply - نظام إدارة المستندات",
     page_icon="🏗️",
     layout="wide"
 )
 
+# --- تنسيق الـ CSS المخصص للهوية البصرية للشركات الهندسية ---
+st.markdown("""
+    <style>
+    /* تغيير خلفية التطبيق الرئيسية لتكون رمادي فاتح فخم ومريح للعين */
+    .stApp {
+        background-color: #f4f5f7;
+    }
+    
+    /* تنسيق القائمة الجانبية (Sidebar) بلون داكن فخم يليق بشركات المقاولات */
+    [data-testid="stSidebar"] {
+        background-color: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    /* ضبط ألوان النصوص داخل القائمة الجانبية لتكون واضحة */
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+    
+    /* تحسين مظهر الأزرار لتصبح ذات حواف ناعمة واحترافية */
+    div.stButton > button {
+        border-radius: 6px;
+        border: 1px solid #333333;
+        background-color: #262626;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    div.stButton > button:hover {
+        background-color: #404040;
+        border: 1px solid #555555;
+    }
+    
+    /* تنسيق العناوين الرئيسية */
+    h1, h2, h3 {
+        color: #1e293b;
+    }
+    
+    /* تنسيق الـ Expander (صناديق الملفات) */
+    .streamlit-expanderHeader {
+        background-color: #ffffff;
+        border-radius: 5px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 USERS_FILE = "users_v3.json"
 FILES_FILE = "files_db.json"
 
-# إنشاء مجلد لصور البروفايل إذا لم يكن موجوداً
 if not os.path.exists("avatars"):
     os.makedirs("avatars")
 
@@ -58,8 +104,8 @@ if "logged_in" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.logged_in:
-    st.markdown("<h2 style='text-align: center;'>🏗️ نظام إدارة مستندات المشاريع - الشركات الهندسية</h2>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center; color: gray;'>تسجيل الدخول</h4>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -78,14 +124,15 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # لوجو الشركة في القائمة الجانبية (إن وجد ملف logo.png)
+    # عرض اللوجو الخاص بالشركة في أعلى القائمة الجانبية إن وجد ملف logo.png
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
+    else:
+        st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
     st.sidebar.markdown(f"### أهلاً بك، {current_user}")
     st.sidebar.markdown(f"**الوظيفة:** {user_data['title']}")
     
-    # رفع صورة البروفايل من الجهاز
     uploaded_avatar = st.sidebar.file_uploader("تحديث صورة البروفايل", type=['jpg', 'png', 'jpeg'])
     if uploaded_avatar is not None:
         avatar_path = f"avatars/{current_user}.png"
@@ -95,7 +142,6 @@ else:
         save_users(users)
         st.sidebar.success("تم تحديث صورة البروفايل بنجاح!")
 
-    # عرض الصورة الحالية إن وجدت
     if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
         st.sidebar.image(user_data["avatar"], width=100)
 
@@ -177,7 +223,6 @@ else:
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
         
         file_title = st.text_input("عنوان الملف / المستند")
-        # اختيار أكثر من شخص أو قسم باستخدام multiselect
         target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب", "Hassan ElSokary", "Omar Nour", "Mohamed abd Elazem", "Karem Mahmoud"])
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
@@ -209,7 +254,6 @@ else:
     elif choice == "إعدادات الصلاحيات":
         st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
         
-        # السماح لكل المستخدمين بتغيير كلمات مرورهم، وللمدير التنفيذي بتغيير كلمات مرور الجميع
         if role == "CEO":
             st.info("بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
             target_edit_users = users.keys()
