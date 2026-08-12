@@ -37,11 +37,6 @@ st.markdown("""
         border: 1px solid #94a3b8;
     }
     
-    /* تنسيق زر الصفحة النشطة الحالية لتكون مميزة */
-    .active-btn {
-        background-color: #1abc9c !important;
-    }
-    
     h1, h2, h3 {
         color: #1e293b;
     }
@@ -99,7 +94,9 @@ if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
 if not st.session_state.logged_in:
-    if os.path.exists("company_profile.png"):
+    if os.path.exists("logo.png"):
+        st.image("logo.png", use_container_width=True)
+    elif os.path.exists("company_profile.png"):
         st.image("company_profile.png", use_container_width=True)
     
     st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
@@ -122,11 +119,11 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- عرض صورة الشركة أو البروفايل في أعلى القائمة الجانبية ---
-    if os.path.exists("company_profile.png"):
-        st.sidebar.image("company_profile.png", use_container_width=True)
-    elif os.path.exists("logo.png"):
+    # --- عرض اللوجو أو صورة البروفايل في أعلى القائمة الجانبية بضمان قراءتها تلقائياً ---
+    if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
+    elif os.path.exists("company_profile.png"):
+        st.sidebar.image("company_profile.png", use_container_width=True)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
@@ -138,13 +135,12 @@ else:
 
     st.sidebar.markdown("---")
 
-    # --- القائمة الرئيسية المصممة بالأزرار (تظهر الاختيارات بوضوح تام ودون أي مربعات بيضاء فارغة) ---
+    # القائمة الرئيسية المصممة بالأزرار
     st.sidebar.markdown("📂 **القائمة الرئيسية**")
     
     pages = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     
     for page in pages:
-        # تمييز الزر الحالي بلون مختلف لو هو الصفحة المفتوحة
         button_label = f"📍 {page}" if st.session_state.current_page == page else f"📁 {page}"
         if st.sidebar.button(button_label, key=f"btn_{page}", use_container_width=True):
             st.session_state.current_page = page
