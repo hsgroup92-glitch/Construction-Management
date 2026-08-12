@@ -93,17 +93,25 @@ if "logged_in" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
-# دالة لقراءة الصورة كـ Bytes مباشرة بغض النظر عن الامتداد
 def display_logo(is_sidebar=False):
-    for filename in ["logo.png", "logo.jpg", "logo.jpeg", "company_profile.png"]:
-        if os.path.exists(filename):
-            with open(filename, "rb") as img_file:
+    import os
+    # تحديد المسار الحالي للفولدر أوتوماتيك عشان يتخطى أي مشكلة في مسار التشغيل
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # كل الاحتمالات الممكنة بما فيها الامتداد المزدوج الخفي بتاع الويندوز
+    possible_names = ["logo.jpg", "logo.jpg.jpg", "logo.png", "logo.png.png", "my_logo.jpg", "my_logo.png"]
+    
+    for filename in possible_names:
+        file_path = os.path.join(current_dir, filename)
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as img_file:
                 img_bytes = img_file.read()
                 if is_sidebar:
                     st.sidebar.image(img_bytes, use_container_width=True)
                 else:
                     st.image(img_bytes, use_container_width=True)
             return True
+            
     return False
 
 if not st.session_state.logged_in:
