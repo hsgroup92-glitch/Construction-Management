@@ -93,14 +93,20 @@ if "logged_in" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
+# دالة بحث مرنة عن الصورة بأي امتداد وفي أي مسار قريب
+def find_image():
+    for name in ["logo.png", "logo.jpg", "logo.jpeg", "company_profile.png"]:
+        if os.path.exists(name):
+            return name
+    return None
+
+img_path = find_image()
+
 if not st.session_state.logged_in:
-    # --- عرض اللوجو في شاشة تسجيل الدخول داخل عمود المنتصف ---
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if os.path.exists("logo.png"):
-            st.image("logo.png", use_container_width=True)
-        elif os.path.exists("company_profile.png"):
-            st.image("company_profile.png", use_container_width=True)
+        if img_path:
+            st.image(img_path, use_container_width=True)
             
         st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
         st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
@@ -120,23 +126,18 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- عرض اللوجو في أعلى القائمة الجانبية بعد تسجيل الدخول ---
-    if os.path.exists("logo.png"):
-        st.sidebar.image("logo.png", use_container_width=True)
-    elif os.path.exists("company_profile.png"):
-        st.sidebar.image("company_profile.png", use_container_width=True)
+    if img_path:
+        st.sidebar.image(img_path, use_container_width=True)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
 
-    # معلومات المستخدم الحالي
     st.sidebar.markdown(f"👤 **{current_user}**")
     st.sidebar.markdown(f"💼 _{user_data['title']}_")
 
     st.sidebar.markdown("---")
 
-    # القائمة الرئيسية المصممة بالأزرار
     st.sidebar.markdown("📂 **القائمة الرئيسية**")
     
     pages = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
@@ -149,7 +150,6 @@ else:
 
     st.sidebar.markdown("---")
 
-    # إعدادات الحساب الشخصي
     with st.sidebar.expander("⚙️ إعدادات الحساب والصورة"):
         if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
             st.image(user_data["avatar"], width=80)
@@ -164,13 +164,11 @@ else:
             st.success("تم التحديث!")
             st.rerun()
 
-    # زر تسجيل الخروج
     if st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
 
-    # --- محتوى الصفحات الرئيسي بناءً على الاختيار ---
     choice = st.session_state.current_page
 
     if choice == "لوحة التحكم والمستندات":
