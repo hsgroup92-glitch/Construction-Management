@@ -12,23 +12,16 @@ st.set_page_config(
 # --- تنسيق الـ CSS المخصص للهوية البصرية للشركات الهندسية ---
 st.markdown("""
     <style>
-    /* تغيير خلفية التطبيق الرئيسية لتكون رمادي فاتح فخم ومريح للعين */
     .stApp {
         background-color: #f4f5f7;
     }
-    
-    /* تنسيق القائمة الجانبية (Sidebar) بلون داكن فخم يليق بشركات المقاولات */
     [data-testid="stSidebar"] {
         background-color: #1a1a1a;
         color: #ffffff;
     }
-    
-    /* ضبط ألوان النصوص داخل القائمة الجانبية لتكون واضحة */
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
-    
-    /* تحسين مظهر الأزرار لتصبح ذات حواف ناعمة واحترافية */
     div.stButton > button {
         border-radius: 6px;
         border: 1px solid #333333;
@@ -37,21 +30,12 @@ st.markdown("""
         font-weight: 600;
         transition: all 0.3s ease;
     }
-    
     div.stButton > button:hover {
         background-color: #404040;
         border: 1px solid #555555;
     }
-    
-    /* تنسيق العناوين الرئيسية */
     h1, h2, h3 {
         color: #1e293b;
-    }
-    
-    /* تنسيق الـ Expander (صناديق الملفات) */
-    .streamlit-expanderHeader {
-        background-color: #ffffff;
-        border-radius: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -124,36 +108,50 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # عرض اللوجو الخاص بالشركة في أعلى القائمة الجانبية إن وجد ملف logo.png
+    # --- الترتيب الاحترافي للقائمة الجانبية ---
+    
+    # 1. اللوجو في أعلى القائمة تماماً
     if os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
-    st.sidebar.markdown(f"### أهلاً بك، {current_user}")
-    st.sidebar.markdown(f"**الوظيفة:** {user_data['title']}")
-    
-    uploaded_avatar = st.sidebar.file_uploader("تحديث صورة البروفايل", type=['jpg', 'png', 'jpeg'])
-    if uploaded_avatar is not None:
-        avatar_path = f"avatars/{current_user}.png"
-        with open(avatar_path, "wb") as f:
-            f.write(uploaded_avatar.getbuffer())
-        users[current_user]["avatar"] = avatar_path
-        save_users(users)
-        st.sidebar.success("تم تحديث صورة البروفايل بنجاح!")
+    st.sidebar.markdown("---")
 
-    if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
-        st.sidebar.image(user_data["avatar"], width=100)
+    # 2. معلومات المستخدم الحالي
+    st.sidebar.markdown(f"👤 **{current_user}**")
+    st.sidebar.markdown(f"💼 _{user_data['title']}_")
 
-    if st.sidebar.button("تسجيل الخروج"):
+    st.sidebar.markdown("---")
+
+    # 3. القائمة الرئيسية للتنقل (عشان تكون واظحة ومتاحة فوراً تحت البيانات)
+    menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
+    choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
+
+    st.sidebar.markdown("---")
+
+    # 4. إعدادات الحساب الشخصي (تحديث الصورة والبروفايل في الأسفل)
+    with st.sidebar.expander("⚙️ إعدادات الحساب والصورة"):
+        if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
+            st.image(user_data["avatar"], width=80)
+        
+        uploaded_avatar = st.file_uploader("تحديث صورة البروفايل", type=['jpg', 'png', 'jpeg'])
+        if uploaded_avatar is not None:
+            avatar_path = f"avatars/{current_user}.png"
+            with open(avatar_path, "wb") as f:
+                f.write(uploaded_avatar.getbuffer())
+            users[current_user]["avatar"] = avatar_path
+            save_users(users)
+            st.success("تم التحديث!")
+            st.rerun()
+
+    # 5. زر تسجيل الخروج في قاع القائمة الجانبية
+    if st.sidebar.button("🚪 تسجيل الخروج", use_center_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
 
-    st.sidebar.markdown("---")
-    menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
-    choice = st.sidebar.selectbox("القائمة الرئيسية", menu)
-
+    # --- محتوى الصفحات الرئيسي ---
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
 
