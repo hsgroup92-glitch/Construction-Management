@@ -189,7 +189,7 @@ else:
         folders = load_folders()
         
         if role == "Accountant":
-            filtered_files = [f for f in all_files if "المحاسب" in f.get("target", []) or "الكل" in f.get("target", [])]
+            filtered_files = [f for f in all_files if current_user in f.get("target", []) or "الكل" in f.get("target", [])]
         elif role == "Site Engineer":
             filtered_files = [f for f in all_files if f.get("uploader") == current_user or current_user in f.get("target", [])]
         else:
@@ -273,7 +273,8 @@ else:
         
         selected_folder = st.selectbox("اختر الفولدر المخصص للملف", folders)
         file_title = st.text_input("عنوان الملف / المستند")
-        target_persons = st.multiselect("موجه إلى الشخص/القسم", ["الكل", "المحاسب"] + active_users)
+        # تم إزالة كلمة المحاسب تماماً لتظهر أسامي الأشخاص فقط
+        target_persons = st.multiselect("موجه إلى الشخص", ["الكل"] + active_users)
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
 
@@ -387,7 +388,7 @@ else:
                             st.success(f"تم تحديث بيانات {uname} بنجاح!")
                             st.rerun()
                     with col_del2:
-                        if uname != current_user: # منع المدير من حذف نفسه بالخطأ
+                        if uname != current_user:
                             if st.button(f"🗑️ حذف المستخدم {uname}", key=f"del_{uname}"):
                                 del users[uname]
                                 save_users(users)
