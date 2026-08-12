@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المحدث عشان نظبط ألوان خانة الاختيار (Selectbox) وتظهر بوضوح ---
+# --- تنسيق الـ CSS المحدث لضمان ظهور النص داخل الختيار بوضوح تـام ---
 st.markdown("""
     <style>
     .stApp {
@@ -23,18 +23,26 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* تنسيق صندوق الاختيار (Selectbox) في القائمة الجانبية ليظهر النص والخلفية بوضوح */
+    /* تعديل صندوق الاختيار ليظهر النص المختار بلون داكن وواضح على خلفية المربع */
     [data-testid="stSidebar"] div[data-baseweb="select"] > div {
-        background-color: #34495e !important;
-        color: white !important;
+        background-color: #ffffff !important;
         border-radius: 6px;
         border: 1px solid #4e6d8c;
     }
     
-    /* لون النص داخل القائمة المنسدلة عند الفتح */
+    /* إجبار النص داخل صندوق الاختيار في القائمة الجانبية يكون لونه أسود وواضح */
+    [data-testid="stSidebar"] div[data-baseweb="select"] span {
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    
+    /* لون قائمة الخيارات عند فتحها */
     div[data-baseweb="popover"] div {
-        background-color: #2b3e50 !important;
-        color: white !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    div[data-baseweb="popover"] span {
+        color: #0f172a !important;
     }
 
     div.stButton > button {
@@ -137,7 +145,7 @@ else:
 
     st.sidebar.markdown("---")
 
-    # 3. القائمة الرئيسية للتنقل (الاختيار هيظهر واضح جواه دلوقتي)
+    # 3. القائمة الرئيسية للتنقل (النص هيظهر بوضوح تام جوه المستطيل الآن)
     menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
 
