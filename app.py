@@ -95,25 +95,22 @@ if "current_page" not in st.session_state:
 
 def display_logo(is_sidebar=False):
     import os
-    # تحديد المسار الحالي للفولدر أوتوماتيك عشان يتخطى أي مشكلة في مسار التشغيل
-    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # المسار المباشر لنفس مكان ملف الـ app
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(base_path, "logo.jpg")
     
-    # كل الاحتمالات الممكنة بما فيها الامتداد المزدوج الخفي بتاع الويندوز
-    possible_names = ["logo.jpg", "logo.jpg.jpg", "logo.png", "logo.png.png", "my_logo.jpg", "my_logo.png"]
-    
-    for filename in possible_names:
-        file_path = os.path.join(current_dir, filename)
-        if os.path.exists(file_path):
-            with open(file_path, "rb") as img_file:
-                img_bytes = img_file.read()
-                if is_sidebar:
-                    st.sidebar.image(img_bytes, use_container_width=True)
-                else:
-                    st.image(img_bytes, use_container_width=True)
-            return True
-            
-    return False
-
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as f:
+            img_bytes = f.read()
+            if is_sidebar:
+                st.sidebar.image(img_bytes, use_container_width=True)
+            else:
+                st.image(img_bytes, use_container_width=True)
+        return True
+    else:
+        # لو مش لاقيها، هيطبعلك المسار هنا عشان نعرف هي فين بالضبط
+        st.error(f"مشلاقي الصورة في المسار ده: {logo_path}")
+        return False
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
