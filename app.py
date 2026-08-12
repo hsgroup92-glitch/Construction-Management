@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المحدث لضمان ظهور النص داخل الختيار بوضوح تـام ---
+# --- تنسيق الـ CSS المحدث ---
 st.markdown("""
     <style>
     .stApp {
@@ -22,21 +22,15 @@ st.markdown("""
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
-    
-    /* تعديل صندوق الاختيار ليظهر النص المختار بلون داكن وواضح على خلفية المربع */
     [data-testid="stSidebar"] div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         border-radius: 6px;
         border: 1px solid #4e6d8c;
     }
-    
-    /* إجبار النص داخل صندوق الاختيار في القائمة الجانبية يكون لونه أسود وواضح */
     [data-testid="stSidebar"] div[data-baseweb="select"] span {
         color: #0f172a !important;
         font-weight: 600 !important;
     }
-    
-    /* لون قائمة الخيارات عند فتحها */
     div[data-baseweb="popover"] div {
         background-color: #ffffff !important;
         color: #0f172a !important;
@@ -44,7 +38,6 @@ st.markdown("""
     div[data-baseweb="popover"] span {
         color: #0f172a !important;
     }
-
     div.stButton > button {
         border-radius: 6px;
         border: 1px solid #cbd5e1;
@@ -111,6 +104,10 @@ if "logged_in" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.logged_in:
+    # عرض صورة الشركة في شاشة تسجيل الدخول لو توفرت
+    if os.path.exists("company_profile.png"):
+        st.image("company_profile.png", use_container_width=True)
+    
     st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
     st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
     
@@ -131,27 +128,29 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # 1. اللوجو في أعلى القائمة
-    if os.path.exists("logo.png"):
+    # --- عرض صورة البروفايل الهندسية ثابتاً في أعلى القائمة الجانبية في كل الصفحات ---
+    if os.path.exists("company_profile.png"):
+        st.sidebar.image("company_profile.png", use_container_width=True)
+    elif os.path.exists("logo.png"):
         st.sidebar.image("logo.png", use_container_width=True)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
 
-    # 2. معلومات المستخدم الحالي
+    # معلومات المستخدم الحالي
     st.sidebar.markdown(f"👤 **{current_user}**")
     st.sidebar.markdown(f"💼 _{user_data['title']}_")
 
     st.sidebar.markdown("---")
 
-    # 3. القائمة الرئيسية للتنقل (النص هيظهر بوضوح تام جوه المستطيل الآن)
+    # القائمة الرئيسية للتنقل
     menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
 
     st.sidebar.markdown("---")
 
-    # 4. إعدادات الحساب الشخصي
+    # إعدادات الحساب الشخصي
     with st.sidebar.expander("⚙️ إعدادات الحساب والصورة"):
         if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
             st.image(user_data["avatar"], width=80)
@@ -166,13 +165,13 @@ else:
             st.success("تم التحديث!")
             st.rerun()
 
-    # 5. زر تسجيل الخروج
+    # زر تسجيل الخروج
     if st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
 
-    # --- محتوى الصفحات الرئيسي ---
+    # --- محتوى الصفحات الرئيسي (تظهر الصورة أيضًا في الواجهة الرئيسية لو أردت) ---
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
 
@@ -287,7 +286,7 @@ else:
                 new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}", disabled=(role != "CEO"))
                 
                 if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
-                    users[uname]["password"] = new_pass
+                    users[uname]["password"]>new_pass
                     if role == "CEO":
                         users[uname]["title"] = new_title
                     save_users(users)
