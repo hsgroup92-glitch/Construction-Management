@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-USERS_FILE = "users.json"
+USERS_FILE = "users_v3.json"
 FILES_FILE = "files_db.json"
 
 def init_users():
