@@ -96,7 +96,7 @@ if "current_page" not in st.session_state:
 def display_logo(is_sidebar=False):
     import os
     # المسار الحقيقي الكامل للصورة عندك على الجهاز مسبوق بحرف r لتجنب مشاكل العلامات
-    logo_path = r"D:\Wark\HS company\my company\claude AI\مستندات\logo.png"
+    logo_path = "logo.png"
     
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
