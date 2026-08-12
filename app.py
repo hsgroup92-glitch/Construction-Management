@@ -24,7 +24,7 @@ if not st.session_state.logged_in:
     user = st.text_input("اسم المستخدم")
     pw = st.text_input("كلمة المرور", type="password")
     if st.button("دخول"):
-        if user == "Hassan ElSokary" and pw == "1234":
+        if user == "Hassan Elsokary" and pw == "1234":
             st.session_state.logged_in = True
             st.rerun()
         else:
