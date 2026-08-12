@@ -95,9 +95,8 @@ if "current_page" not in st.session_state:
 
 def display_logo(is_sidebar=False):
     import os
-    # المسار المباشر لنفس مكان ملف الـ app
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    logo_path = os.path.join(base_path, "logo.jpg")
+    # المسار الحقيقي الكامل للصورة عندك على الجهاز مسبوق بحرف r لتجنب مشاكل العلامات
+    logo_path = r"D:\Wark\HS company\my company\claude AI\logo.jpg"
     
     if os.path.exists(logo_path):
         with open(logo_path, "rb") as f:
@@ -108,7 +107,6 @@ def display_logo(is_sidebar=False):
                 st.image(img_bytes, use_container_width=True)
         return True
     else:
-        # لو مش لاقيها، هيطبعلك المسار هنا عشان نعرف هي فين بالضبط
         st.error(f"مشلاقي الصورة في المسار ده: {logo_path}")
         return False
 if not st.session_state.logged_in:
