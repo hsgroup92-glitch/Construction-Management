@@ -9,25 +9,34 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المحدث (ألوان أفتح وأكثر راحة للعين) ---
+# --- تنسيق الـ CSS المحدث عشان نظبط ألوان خانة الاختيار (Selectbox) وتظهر بوضوح ---
 st.markdown("""
     <style>
-    /* خلفية التطبيق العامة أصبحت أفتح ونظيفة جداً */
     .stApp {
         background-color: #f8fafc;
     }
-    
-    /* القائمة الجانبية أصبحت بلون رمادي متوسط ودافيء بدل الأسود الغامق */
     [data-testid="stSidebar"] {
         background-color: #2b3e50;
         color: #ffffff;
     }
-    
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
     
-    /* تنسيق الأزرار بلون أفتح وأكثر حيوية */
+    /* تنسيق صندوق الاختيار (Selectbox) في القائمة الجانبية ليظهر النص والخلفية بوضوح */
+    [data-testid="stSidebar"] div[data-baseweb="select"] > div {
+        background-color: #34495e !important;
+        color: white !important;
+        border-radius: 6px;
+        border: 1px solid #4e6d8c;
+    }
+    
+    /* لون النص داخل القائمة المنسدلة عند الفتح */
+    div[data-baseweb="popover"] div {
+        background-color: #2b3e50 !important;
+        color: white !important;
+    }
+
     div.stButton > button {
         border-radius: 6px;
         border: 1px solid #cbd5e1;
@@ -36,12 +45,10 @@ st.markdown("""
         font-weight: 600;
         transition: all 0.3s ease;
     }
-    
     div.stButton > button:hover {
         background-color: #4e6d8c;
         border: 1px solid #94a3b8;
     }
-    
     h1, h2, h3 {
         color: #1e293b;
     }
@@ -130,7 +137,7 @@ else:
 
     st.sidebar.markdown("---")
 
-    # 3. القائمة الرئيسية للتنقل
+    # 3. القائمة الرئيسية للتنقل (الاختيار هيظهر واضح جواه دلوقتي)
     menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
     choice = st.sidebar.selectbox("📂 القائمة الرئيسية", menu)
 
