@@ -1,602 +1,234 @@
-# -*- coding: utf-8 -*-
-"""
-تطبيق إدارة مستندات المشاريع - شركة مقاولات
-Construction Company - Project Document Management System
-
-تطبيق Streamlit لإدارة رفع ومتابعة مستندات المشاريع الهندسية
-(شيتات إكسيل، رسومات PDF، مستخلصات، صور الموقع) بصلاحيات متعددة.
-"""
-
-import streamlit as st
-import pandas as pd
 import os
 import json
-import base64
-import shutil
+import streamlit as st
 from datetime import datetime
-from pathlib import Path
 
-# ============================================================
-#  الإعدادات العامة  |  General Configuration
-# ============================================================
-
-BASE_DIR = Path(__file__).parent
-DATA_DIR = BASE_DIR / "data"
-USERS_FILE = BASE_DIR / "users.json"
-PROJECTS_FILE = BASE_DIR / "projects.json"
-LOG_FILE = BASE_DIR / "uploads_log.csv"
-
-ALLOWED_EXTENSIONS = ["xlsx", "xls", "csv", "pdf", "jpg", "jpeg", "png"]
-
-ROLES = {
-    "project_manager": "مدير المشروع",
-    "site_engineer": "مهندس الموقع",
-    "accountant": "محاسب",
-}
-
-LOG_COLUMNS = [
-    "id", "file_name", "project", "uploader_username",
-    "uploader_name", "role", "upload_date", "file_path", "file_size_kb",
-]
-
-st.set_page_config(
+# إعدادات صفحة التطبيق
+st.set_page_title_page_config = st.set_page_config(
     page_title="نظام إدارة مستندات المشاريع",
     page_icon="🏗️",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    layout="wide"
 )
 
-# ============================================================
-#  التهيئة الأولية للملفات  |  Bootstrap default data files
-# ============================================================
+# ملفات تخزين البيانات محلياً
+USERS_FILE = "users.json"
+FILES_FILE = "files_db.json"
 
-def bootstrap_files():
-    DATA_DIR.mkdir(exist_ok=True)
-
-    if not USERS_FILE.exists():
+# تهيئة بيانات المستخدمين الافتراضية مع الصلاحيات والأسماء الجديدة
+def init_users():
+    if not os.path.exists(USERS_FILE):
         default_users = {
-            "admin": {
-                "password": "admin123",
-                "role": "project_manager",
-                "name": "Hassan Elsokary",
-            },
-            "eng.mohamed": {
-                "password": "eng123",
-                "role": "site_engineer",
-                "name": "محمد علي",
-            },
-            "acc.sara": {
-                "password": "acc123",
-                "role": "accountant",
-                "name": "سارة محمود",
-            },
-        }
-        USERS_FILE.write_text(
-            json.dumps(default_users, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-
-    if not PROJECTS_FILE.exists():
-        default_projects = ["برج النخيل السكني", "مجمع الواحة التجاري", "طريق الكورنيش"]
-        PROJECTS_FILE.write_text(
-            json.dumps(default_projects, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-
-    if not LOG_FILE.exists():
-        pd.DataFrame(columns=LOG_COLUMNS).to_csv(LOG_FILE, index=False, encoding="utf-8-sig")
-
+            "Hassan ElSokary": {"password": "123", "role": "CEO", "title": "المدير التنفيذي (CEO)", "avatar": ""},
+            "Omar Nour": {"password": "123", "role": "Project Manager", "title": "مدير المشروع", "avatar": ""},
+            "Mohamed abd Elazem": {"password": "123", "role": "Site Engineer", "title": "مهندس الموقع", "avatar": ""},
+            "Karem Mahmoud": {"password": "123", "role": "Accountant", "title": "المحاسب", "avatar": ""}
+        }        }
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(default_users, f, ensure_ascii=False, indent=4)
 
 def load_users():
-    return json.loads(USERS_FILE.read_text(encoding="utf-8"))
-
+    init_users()
+    with open(USERS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 def save_users(users):
-    USERS_FILE.write_text(json.dumps(users, ensure_ascii=False, indent=2), encoding="utf-8")
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(users, f, ensure_ascii=False, indent=4)
 
+# تهيئة قاعدة بيانات المستندات
+def init_files():
+    if not os.path.exists(FILES_FILE):
+        with open(FILES_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f, ensure_ascii=False, indent=4)
 
-def load_projects():
-    return json.loads(PROJECTS_FILE.read_text(encoding="utf-8"))
+def load_files():
+    init_files()
+    with open(FILES_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
+def save_files(files):
+    with open(FILES_FILE, "w", encoding="utf-8") as f:
+        json.dump(files, f, ensure_ascii=False, indent=4)
 
-def save_projects(projects):
-    PROJECTS_FILE.write_text(json.dumps(projects, ensure_ascii=False, indent=2), encoding="utf-8")
+users = load_users()
+files_db = load_files()
 
+# نظام تسجيل الدخول
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.username = ""
 
-def load_log():
-    df = pd.read_csv(LOG_FILE, encoding="utf-8-sig", dtype=str)
-    for col in LOG_COLUMNS:
-        if col not in df.columns:
-            df[col] = ""
-    return df
-
-
-def append_log(row: dict):
-    df = load_log()
-    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-    df.to_csv(LOG_FILE, index=False, encoding="utf-8-sig")
-
-
-def ensure_project_folder(project_name: str) -> Path:
-    folder = DATA_DIR / project_name
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder
-
-
-# ============================================================
-#  التنسيق (RTL + عربي + هوية بصرية)  |  Styling
-# ============================================================
-
-def inject_custom_css():
-    st.markdown(
-        """
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
-
-        html, body, [class*="css"]  {
-            font-family: 'Cairo', sans-serif;
-            direction: rtl;
-        }
-
-        .block-container {
-            padding-top: 1.5rem;
-            padding-bottom: 3rem;
-            max-width: 1200px;
-        }
-
-        /* عناوين ورأس الصفحة */
-        .app-header {
-            background: linear-gradient(90deg, #0f4c5c 0%, #1a7a8c 100%);
-            padding: 22px 28px;
-            border-radius: 14px;
-            color: white;
-            margin-bottom: 22px;
-            box-shadow: 0 4px 14px rgba(15,76,92,0.25);
-        }
-        .app-header h1 {
-            margin: 0;
-            font-size: 26px;
-            font-weight: 800;
-        }
-        .app-header p {
-            margin: 4px 0 0 0;
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        /* بطاقة معلومات المستخدم في القائمة الجانبية */
-        .user-card {
-            background: #f0f7f8;
-            border-radius: 12px;
-            padding: 14px 16px;
-            margin-bottom: 14px;
-            border: 1px solid #d7e8ea;
-        }
-        .user-card .name { font-weight: 700; font-size: 16px; color: #0f4c5c; }
-        .user-card .role {
-            display: inline-block;
-            margin-top: 6px;
-            background: #1a7a8c;
-            color: white;
-            font-size: 12px;
-            padding: 3px 10px;
-            border-radius: 20px;
-        }
-
-        /* أزرار */
-        div.stButton > button {
-            border-radius: 10px;
-            font-weight: 600;
-            padding: 8px 18px;
-        }
-        div.stButton > button[kind="primary"] {
-            background-color: #1a7a8c;
-            border: none;
-        }
-
-        /* جدول الملفات */
-        .stDataFrame { direction: rtl; }
-
-        /* حاوية تسجيل الدخول */
-        .login-box {
-            max-width: 420px;
-            margin: 40px auto;
-            background: white;
-            padding: 34px 32px;
-            border-radius: 16px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.08);
-            border: 1px solid #eaeaea;
-        }
-        .login-box h2 { text-align: center; color: #0f4c5c; margin-bottom: 4px; }
-        .login-box p.sub { text-align: center; color: #777; margin-bottom: 22px; font-size: 13px; }
-
-        /* شارات نوع الملف */
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-pdf { background: #fde2e2; color: #c0392b; }
-        .badge-excel { background: #e3f6e6; color: #1e8449; }
-        .badge-image { background: #e3ecfb; color: #2456ba; }
-        .badge-other { background: #eee; color: #555; }
-
-        section[data-testid="stSidebar"] {
-            background-color: #f7fafb;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def file_badge(filename: str) -> str:
-    ext = filename.split(".")[-1].lower()
-    if ext == "pdf":
-        return '<span class="badge badge-pdf">PDF</span>'
-    if ext in ("xlsx", "xls", "csv"):
-        return '<span class="badge badge-excel">Excel</span>'
-    if ext in ("jpg", "jpeg", "png"):
-        return '<span class="badge badge-image">صورة</span>'
-    return '<span class="badge badge-other">ملف</span>'
-
-
-# ============================================================
-#  المصادقة  |  Authentication
-# ============================================================
-
-def login_page():
-    st.markdown(
-        """
-        <div class="login-box">
-            <h2>🏗️ نظام إدارة مستندات المشاريع</h2>
-            <p class="sub">من فضلك سجّل الدخول للمتابعة</p>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    with st.form("login_form"):
-        username = st.text_input("اسم المستخدم")
+if not st.session_state.logged_in:
+    st.markdown("<h2 style='text-align: center;'>🏗️ نظام إدارة مستندات المشاريع - الشركات الهندسية</h2>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: gray;'>تسجيل الدخول</h4>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        selected_user = st.selectbox("اختر المستخدم", list(users.keys()))
         password = st.text_input("كلمة المرور", type="password")
-        submitted = st.form_submit_button("تسجيل الدخول", use_container_width=True, type="primary")
+        
+        if st.button("دخول", use_container_width=True):
+            if password == users[selected_user]["password"]:
+                st.session_state.logged_in = True
+                st.session_state.username = selected_user
+                st.rerun()
+            else:
+                st.error("كلمة المرور غير صحيحة")
+else:
+    current_user = st.session_state.username
+    user_data = users[current_user]
+    role = user_data["role"]
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # الشريط الجانبي
+    st.sidebar.markdown(f"### أهلاً بك، {current_user}")
+    st.sidebar.markdown(f"**الدظيفة:** {user_data['title']}")
+    
+    # 6. إمكانية إضافة صورة للأكونت
+    avatar_input = st.sidebar.text_input("رابط صورة البروفایل (Avatar URL)", value=user_data.get("avatar", ""))
+    if avatar_input != user_data.get("avatar", ""):
+        users[current_user]["avatar"] = avatar_input
+        save_users(users)
+        st.sidebar.success("تم تحديث صورة البروفايل!")
 
-    if submitted:
-        users = load_users()
-        user = users.get(username)
-        if user and user["password"] == password:
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.session_state.name = user["name"]
-            st.session_state.role = user["role"]
-            st.rerun()
-        else:
-            st.error("اسم المستخدم أو كلمة المرور غير صحيحة")
+    if user_data.get("avatar"):
+        st.sidebar.image(user_data["avatar"], width=100)
 
-    with st.expander("بيانات دخول تجريبية (Demo)"):
-        st.write(
-            "- مدير المشروع → `admin` / `admin123`\n"
-            "- مهندس الموقع → `eng.mohamed` / `eng123`\n"
-            "- محاسب → `acc.sara` / `acc123`"
-        )
-
-
-def logout_button():
-    if st.sidebar.button("🚪 تسجيل الخروج", use_container_width=True):
-        for key in ["logged_in", "username", "name", "role"]:
-            st.session_state.pop(key, None)
+    if st.sidebar.button("تسجيل الخروج"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
         st.rerun()
 
-
-# ============================================================
-#  الشريط الجانبي  |  Sidebar navigation
-# ============================================================
-
-def sidebar_nav():
-    st.sidebar.markdown(
-        f"""
-        <div class="user-card">
-            <div class="name">👤 {st.session_state.name}</div>
-            <span class="role">{ROLES.get(st.session_state.role, st.session_state.role)}</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    pages = ["📤 رفع المستندات", "📁 إدارة الملفات"]
-    if st.session_state.role == "project_manager":
-        pages.append("⚙️ إدارة المشاريع والمستخدمين")
-
-    choice = st.sidebar.radio("القائمة", pages, label_visibility="collapsed")
     st.sidebar.markdown("---")
-    logout_button()
-    return choice
+    menu = ["لوحة التحكم والمستندات", "إدارة الملفات الجديدة", "إعدادات الصلاحيات"]
+    choice = st.sidebar.selectbox("القائمة الرئيسية", menu)
 
+    # 1, 2, 3, 4, 5, 7: لوحة التحكم وعرض الملفات والصلاحيات
+    if choice == "لوحة التحكم والمستندات":
+        st.title("📁 لوحة متابعة المستندات والمشاريع")
 
-# ============================================================
-#  صفحة رفع المستندات  |  Upload page
-# ============================================================
-
-def upload_page():
-    st.markdown(
-        """
-        <div class="app-header">
-            <h1>📤 رفع المستندات</h1>
-            <p>اختر المشروع وارفع الملفات الخاصة به (شيتات، رسومات، مستخلصات، صور الموقع)</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    projects = load_projects()
-    if not projects:
-        st.warning("لا توجد مشاريع مضافة بعد. يرجى التواصل مع مدير المشروع لإضافة مشروع.")
-        return
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        project = st.selectbox("اختر المشروع", projects)
-    with col2:
-        st.metric("عدد المشاريع المتاحة", len(projects))
-
-    uploaded_files = st.file_uploader(
-        "اختر ملف أو أكثر لرفعه",
-        type=ALLOWED_EXTENSIONS,
-        accept_multiple_files=True,
-        help="الأنواع المسموحة: Excel, PDF, JPG, PNG",
-    )
-
-    note = st.text_input("ملاحظة على الرفع (اختياري)", placeholder="مثال: مستخلص شهر يوليو")
-
-    if st.button("⬆️ رفع الملفات المحددة", type="primary", disabled=not uploaded_files):
-        folder = ensure_project_folder(project)
-        count = 0
-        for uf in uploaded_files:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_name = f"{timestamp}_{uf.name}"
-            dest_path = folder / safe_name
-            with open(dest_path, "wb") as f:
-                f.write(uf.getbuffer())
-
-            df = load_log()
-            new_id = 1 if df.empty else int(pd.to_numeric(df["id"], errors="coerce").max()) + 1
-            append_log(
-                {
-                    "id": new_id,
-                    "file_name": uf.name,
-                    "project": project,
-                    "uploader_username": st.session_state.username,
-                    "uploader_name": st.session_state.name,
-                    "role": ROLES.get(st.session_state.role, st.session_state.role),
-                    "upload_date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "file_path": str(dest_path.relative_to(BASE_DIR)),
-                    "file_size_kb": round(dest_path.stat().st_size / 1024, 1),
-                }
-            )
-            count += 1
-        st.success(f"✅ تم رفع {count} ملف بنجاح إلى مشروع «{project}»")
-        st.balloons()
-
-    st.markdown("---")
-    st.subheader("آخر الملفات المرفوعة لهذا المشروع")
-    df = load_log()
-    project_files = df[df["project"] == project].sort_values("id", ascending=False).head(5)
-    if project_files.empty:
-        st.info("لا توجد ملفات مرفوعة لهذا المشروع حتى الآن.")
-    else:
-        for _, row in project_files.iterrows():
-            st.markdown(
-                f"{file_badge(row['file_name'])} &nbsp; **{row['file_name']}** "
-                f"— بواسطة {row['uploader_name']} — {row['upload_date']}",
-                unsafe_allow_html=True,
-            )
-
-
-# ============================================================
-#  صفحة إدارة الملفات  |  File management page
-# ============================================================
-
-def files_page():
-    st.markdown(
-        """
-        <div class="app-header">
-            <h1>📁 إدارة الملفات</h1>
-            <p>عرض جميع المستندات المرفوعة مع إمكانية التحميل والمعاينة</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    df = load_log()
-    if df.empty:
-        st.info("لم يتم رفع أي ملفات بعد.")
-        return
-
-    projects = ["الكل"] + sorted(df["project"].dropna().unique().tolist())
-
-    fcol1, fcol2, fcol3 = st.columns(3)
-    with fcol1:
-        project_filter = st.selectbox("تصفية حسب المشروع", projects)
-    with fcol2:
-        engineer_filter = st.text_input("تصفية باسم الرافع (اختياري)")
-    with fcol3:
-        type_filter = st.selectbox("نوع الملف", ["الكل", "PDF", "Excel", "صورة"])
-
-    filtered = df.copy()
-    if project_filter != "الكل":
-        filtered = filtered[filtered["project"] == project_filter]
-    if engineer_filter:
-        filtered = filtered[filtered["uploader_name"].str.contains(engineer_filter, na=False)]
-    if type_filter != "الكل":
-        ext_map = {
-            "PDF": ["pdf"],
-            "Excel": ["xlsx", "xls", "csv"],
-            "صورة": ["jpg", "jpeg", "png"],
-        }
-        exts = ext_map[type_filter]
-        filtered = filtered[filtered["file_name"].str.lower().str.split(".").str[-1].isin(exts)]
-
-    filtered = filtered.sort_values("id", ascending=False)
-
-    st.markdown(f"**عدد الملفات المطابقة: {len(filtered)}**")
-    st.markdown("---")
-
-    # جدول ملخص سريع
-    display_df = filtered[
-        ["file_name", "project", "uploader_name", "role", "upload_date", "file_size_kb"]
-    ].rename(
-        columns={
-            "file_name": "اسم الملف",
-            "project": "المشروع",
-            "uploader_name": "اسم الرافع",
-            "role": "الصلاحية",
-            "upload_date": "تاريخ الرفع",
-            "file_size_kb": "الحجم (KB)",
-        }
-    )
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-    st.subheader("تحميل / معاينة الملفات")
-
-    for _, row in filtered.iterrows():
-        file_path = BASE_DIR / row["file_path"]
-        with st.expander(f"{file_badge(row['file_name'])}  {row['file_name']} — {row['project']}", expanded=False):
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                st.write(f"**رفعه:** {row['uploader_name']} ({row['role']})")
-                st.write(f"**تاريخ الرفع:** {row['upload_date']}")
-                st.write(f"**الحجم:** {row['file_size_kb']} KB")
-            with c2:
-                if file_path.exists():
-                    with open(file_path, "rb") as f:
-                        st.download_button(
-                            "⬇️ تحميل الملف",
-                            data=f.read(),
-                            file_name=row["file_name"],
-                            use_container_width=True,
-                            key=f"dl_{row['id']}",
-                        )
-                else:
-                    st.error("الملف غير موجود على السيرفر")
-
-            ext = row["file_name"].split(".")[-1].lower()
-            if file_path.exists():
-                if ext in ("jpg", "jpeg", "png"):
-                    st.image(str(file_path), use_container_width=True)
-                elif ext in ("xlsx", "xls", "csv"):
-                    try:
-                        preview_df = (
-                            pd.read_csv(file_path)
-                            if ext == "csv"
-                            else pd.read_excel(file_path)
-                        )
-                        st.dataframe(preview_df.head(20), use_container_width=True)
-                    except Exception as e:
-                        st.warning(f"تعذّرت معاينة الملف: {e}")
-                elif ext == "pdf":
-                    with open(file_path, "rb") as f:
-                        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
-                    pdf_display = (
-                        f'<iframe src="data:application/pdf;base64,{base64_pdf}" '
-                        f'width="100%" height="500" style="border-radius:10px;border:1px solid #ddd;"></iframe>'
-                    )
-                    st.markdown(pdf_display, unsafe_allow_html=True)
-
-
-# ============================================================
-#  صفحة إدارة المشاريع والمستخدمين (لمدير المشروع فقط)
-# ============================================================
-
-def admin_page():
-    st.markdown(
-        """
-        <div class="app-header">
-            <h1>⚙️ إدارة المشاريع والمستخدمين</h1>
-            <p>متاحة فقط لمدير المشروع</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    tab1, tab2 = st.tabs(["📂 المشاريع", "👥 المستخدمون"])
-
-    with tab1:
-        projects = load_projects()
-        st.write("**المشاريع الحالية:**")
-        for p in projects:
-            st.markdown(f"- {p}")
-
-        with st.form("add_project"):
-            new_project = st.text_input("اسم مشروع جديد")
-            add_submit = st.form_submit_button("➕ إضافة المشروع")
-        if add_submit and new_project:
-            if new_project in projects:
-                st.warning("المشروع موجود بالفعل")
-            else:
-                projects.append(new_project)
-                save_projects(projects)
-                ensure_project_folder(new_project)
-                st.success(f"تم إضافة مشروع «{new_project}»")
-                st.rerun()
-
-    with tab2:
-        users = load_users()
-        rows = [
-            {"اسم المستخدم": u, "الاسم": d["name"], "الصلاحية": ROLES.get(d["role"], d["role"])}
-            for u, d in users.items()
-        ]
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-        with st.form("add_user"):
-            st.write("**إضافة مستخدم جديد**")
-            uc1, uc2 = st.columns(2)
-            with uc1:
-                new_username = st.text_input("اسم المستخدم (بالإنجليزية)")
-                new_name = st.text_input("الاسم الكامل")
-            with uc2:
-                new_password = st.text_input("كلمة المرور", type="password")
-                new_role = st.selectbox("الصلاحية", list(ROLES.keys()), format_func=lambda k: ROLES[k])
-            user_submit = st.form_submit_button("➕ إضافة المستخدم")
-
-        if user_submit and new_username and new_password and new_name:
-            if new_username in users:
-                st.warning("اسم المستخدم موجود بالفعل")
-            else:
-                users[new_username] = {"password": new_password, "role": new_role, "name": new_name}
-                save_users(users)
-                st.success(f"تم إضافة المستخدم «{new_name}»")
-                st.rerun()
-
-
-# ============================================================
-#  نقطة التشغيل الرئيسية  |  Main entry point
-# ============================================================
-
-def main():
-    bootstrap_files()
-    inject_custom_css()
-
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-
-    if not st.session_state.logged_in:
-        login_page()
-        return
-
-    choice = sidebar_nav()
-
-    if choice == "📤 رفع المستندات":
-        upload_page()
-    elif choice == "📁 إدارة الملفات":
-        files_page()
-    elif choice.startswith("⚙️"):
-        if st.session_state.role == "project_manager":
-            admin_page()
+        # الفلاتر والصلاحيات في الرؤية
+        all_files = load_files()
+        
+        # تصفية الملفات حسب الصلاحية
+        if role == "Accountant":
+            # المحاسب يرى المستندات الموجهة له أو العامة
+            filtered_files = [f for f in all_files if f.get("target") == "المحاسب" or f.get("target"] == "الكل"]
+        elif role == "Site Engineer":
+            filtered_files = [f for f in all_files if f.get("uploader"] == current_user or f.get("target") == current_user]
         else:
-            st.error("ليس لديك صلاحية الوصول لهذه الصفحة")
+            filtered_files = all_files # CEO ومدير المشروع يرون كل شيء
 
+        st.subheader(f"الملفات المتاحة لعرضها ({len(filtered_files)})")
 
-if __name__ == "__main__":
-    main()
+        for idx, file_info in enumerate(filtered_files):
+            with st.expander(f"📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.write(f"**موجه إلى:** {file_info.get('target')}")
+                    st.write(f"**تاريخ الرفع:** {file_info.get('date')}")
+                    st.write(f"**نوع الملف:** {file_info.get('file_type', 'مستند')}")
+                with col_b:
+                    # 4. تنبيه على الأشخاص الذين تم رؤية الملفات
+                    viewed_by = file_info.get("viewed_by", [])
+                    if current_user not in viewed_by and role != "CEO":
+                        viewed_by.append(current_user)
+                        file_info["viewed_by"] = viewed_by
+                        save_files(all_files)
+                    st.write(f"👀 **شوهد بواسطة:** {', '.join(viewed_by) if viewed_by else 'لا أحد بعد'}")
+
+                # عرض الصور أو الفيديوهات المرفوعة (7)
+                if file_info.get("file_data"):
+                    if file_info.get("file_type") in ["image/png", "image/jpeg", "image/jpg"]:
+                        st.image(file_info["file_data"], caption=file_info.get('title'), use_container_width=True)
+                    elif file_info.get("file_type") in ["video/mp4", "video/mov"]:
+                        st.video(file_info["file_data"])
+
+                st.markdown("---")
+                # 3. تعليقات على الرفع
+                st.markdown("💬 **التعليقات:**")
+                comments = file_info.get("comments", [])
+                for c in comments:
+                    st.markdown(f"- **{c['user']}**: {c['text']} *({c['time']})*")
+
+                new_comment = st.text_input(f"اضف تعليق جديد", key=f"comm_{idx}")
+                if st.button("إرسال التعليق", key=f"btn_comm_{idx}"):
+                    if new_comment:
+                        comments.append({
+                            "user": current_user,
+                            "text": new_comment,
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        })
+                        file_info["comments"] = comments
+                        save_files(all_files)
+                        st.success("تم إضافة التعليق!")
+                        st.rerun()
+
+                # تغيير الحالة (لمدير المشروع و CEO ومهندس الموقع)
+                if role in ["CEO", "Project Manager", "Site Engineer"]:
+                    new_status = st.selectbox("تحديث حالة الرفع", ["مكتمل", "غير مكتمل", "قيد المراجعة", "يحتاج تعديل"], 
+                                              index=["مكتمل", "غير مكتمل", "قيد المراجعة", "يحتاج تعديل"].index(file_info.get("status", "غير مكتمل")), 
+                                              key=f"status_{idx}")
+                    if new_status != file_info.get("status"):
+                        file_info["status"] = new_status
+                        save_files(all_files)
+                        st.success("تم تحديث الحالة!")
+                        st.rerun()
+
+    elif choice == "إدارة الملفات الجديدة":
+        st.title("📤 رفع ملف، صورة، أو فيديو جديد")
+        
+        # 5. اضافة عنوان للملف فى حاله الرفع
+        file_title = st.text_input("عنوان الملف / المستند")
+        
+        # 1. تحديد الأشخاص الموجه لهم رفع المستندات
+        target_person = st.selectbox("موجه إلى الشخص/القسم", ["الكل", "Hassan ElSokary", "مدير المشروع", "مهندس الموقع", "المحاسب"])
+        
+        # 2. حالة الرفع الأولية
+        initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
+
+        # 7. امكانية رفع صور و فيديوهات ومستندات
+        uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
+
+        if st.button("رفع الملف وإرساله للنظام", use_container_width=True):
+            if file_title and uploaded_file:
+                all_files = load_files()
+                
+                # حفظ مؤقت للملفات المرفوعة كـ bytes أو مسار
+                file_bytes = uploaded_file.getvalue()
+                
+                new_entry = {
+                    "title": file_title,
+                    "target": target_person,
+                    "status": initial_status,
+                    "uploader": current_user,
+                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "file_type": uploaded_file.type,
+                    "file_name": uploaded_file.name,
+                    "file_data": file_bytes.hex() if file_bytes else "", # حفظ البيانات
+                    "comments": [],
+                    "viewed_by": []
+                }
+                
+                all_files.append(new_entry)
+                save_files(all_files)
+                st.success("تم رفع الملف بنجاح وإتاحته في النظام!")
+            else:
+                st.warning("يرجى كتابة عنوان الملف وإرفاق الملف المطلوب.")
+
+    elif choice == "إعدادات الصلاحيات":
+        st.title("⚙️ إدارة صلاحيات المستخدمين والكلمات السرية")
+        if role == "CEO":
+            st.info(" بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات وكلمات مرور مستخدمي النظام بالكامل.")
+            
+            for uname, udata in users.items():
+                with st.expander(f"مستخدم: {uname} ({udata['title']})"):
+                    new_pass = st.text_input(f"كلمة المرور الجديدة لـ {uname}", value=udata["password"], key=f"pass_{uname}")
+                    new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}")
+                    
+                    if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
+                        users[uname]["password"] = new_pass
+                        users[uname]["title"] = new_title
+                        save_users(users)
+                        st.success(f"تم تحديث بيانات {uname} بنجاح!")
+        else:
+            st.warning("هذه الصفحة مخصصة للمدير التنفيذي (CEO) فقط.")
