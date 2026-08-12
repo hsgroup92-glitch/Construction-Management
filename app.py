@@ -91,12 +91,14 @@ if "current_page" not in st.session_state:
     st.session_state.current_page = "لوحة التحكم والمستندات"
 
 if not st.session_state.logged_in:
-    if os.path.exists("logo.jpg.png"):
-        st.image("logo.jpg.png", use_container_width=True)
-    elif os.path.exists("logo.png"):
-        st.image("logo.png", use_container_width=True)
-    elif os.path.exists("company_profile.png"):
-        st.image("company_profile.png", use_container_width=True)
+    col_img1, col_img2, col_img3 = st.columns([1, 1.2, 1])
+    with col_img2:
+        if os.path.exists("logo.jpg.png"):
+            st.image("logo.jpg.png", width=250)
+        elif os.path.exists("logo.png"):
+            st.image("logo.png", width=250)
+        elif os.path.exists("company_profile.png"):
+            st.image("company_profile.png", width=250)
     
     st.markdown("<h2 style='text-align: center; color: #1e293b;'>🏗️ HS Construction & Supply</h2>", unsafe_allow_html=True)
     st.markdown("<h4 style='text-align: center; color: #64748b;'>نظام إدارة المستندات والمشاريع الهندسية</h4>", unsafe_allow_html=True)
@@ -119,11 +121,11 @@ else:
     role = user_data["role"]
 
     if os.path.exists("logo.jpg.png"):
-        st.sidebar.image("logo.jpg.png", use_container_width=True)
+        st.sidebar.image("logo.jpg.png", width=180)
     elif os.path.exists("logo.png"):
-        st.sidebar.image("logo.png", use_container_width=True)
+        st.sidebar.image("logo.png", width=180)
     elif os.path.exists("company_profile.png"):
-        st.sidebar.image("company_profile.png", use_container_width=True)
+        st.sidebar.image("company_profile.png", width=180)
     else:
         st.sidebar.markdown("<h3 style='text-align: center;'>HS Construction</h3>", unsafe_allow_html=True)
 
