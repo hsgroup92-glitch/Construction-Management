@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- تنسيق الـ CSS المحدث ---
+# --- تنسيق الـ CSS المحدث لضمان ظهور النصوص والصناديق بوضوح تام ---
 st.markdown("""
     <style>
     .stApp {
@@ -22,6 +22,8 @@ st.markdown("""
     [data-testid="stSidebar"] * {
         color: #ffffff !important;
     }
+    
+    /* تعديل صندوق الاختيار للقائمة الرئيسية ليظهر بوضوح والنص بداخلة لونه أسود داكن */
     [data-testid="stSidebar"] div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         border-radius: 6px;
@@ -31,6 +33,8 @@ st.markdown("""
         color: #0f172a !important;
         font-weight: 600 !important;
     }
+    
+    /* لون القائمة المنسدلة عند الفتح */
     div[data-baseweb="popover"] div {
         background-color: #ffffff !important;
         color: #0f172a !important;
@@ -38,6 +42,7 @@ st.markdown("""
     div[data-baseweb="popover"] span {
         color: #0f172a !important;
     }
+
     div.stButton > button {
         border-radius: 6px;
         border: 1px solid #cbd5e1;
@@ -104,7 +109,6 @@ if "logged_in" not in st.session_state:
     st.session_state.username = ""
 
 if not st.session_state.logged_in:
-    # عرض صورة الشركة في شاشة تسجيل الدخول لو توفرت
     if os.path.exists("company_profile.png"):
         st.image("company_profile.png", use_container_width=True)
     
@@ -128,7 +132,7 @@ else:
     user_data = users[current_user]
     role = user_data["role"]
 
-    # --- عرض صورة البروفايل الهندسية ثابتاً في أعلى القائمة الجانبية في كل الصفحات ---
+    # --- عرض صورة الشركة أو البروفايل في أعلى القائمة الجانبية في كل الصفحات ---
     if os.path.exists("company_profile.png"):
         st.sidebar.image("company_profile.png", use_container_width=True)
     elif os.path.exists("logo.png"):
@@ -171,7 +175,7 @@ else:
         st.session_state.username = ""
         st.rerun()
 
-    # --- محتوى الصفحات الرئيسي (تظهر الصورة أيضًا في الواجهة الرئيسية لو أردت) ---
+    # --- محتوى الصفحات الرئيسي ---
     if choice == "لوحة التحكم والمستندات":
         st.title("📁 لوحة متابعة المستندات والمشاريع")
 
@@ -286,7 +290,7 @@ else:
                 new_title = st.text_input(f"المسمى الوظيفي", value=udata["title"], key=f"title_{uname}", disabled=(role != "CEO"))
                 
                 if st.button(f"حفظ التعديلات لـ {uname}", key=f"save_{uname}"):
-                    users[uname]["password"]>new_pass
+                    users[uname]["password"] = new_pass  # تم التصحيح هنا
                     if role == "CEO":
                         users[uname]["title"] = new_title
                     save_users(users)
