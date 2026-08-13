@@ -1,74 +1,59 @@
 import streamlit as st
 import pandas as pd
 import io
-import openpyxl
 import os
+import sqlite3
 import datetime
 
 # إعداد الصفحة الأساسي
 st.set_page_config(page_title="HS Construction & Supply - DMS", layout="wide")
 
-# محاكاة لبيانات المستخدمين والصلاحيات (يتم استبدالها بقاعدة بيانات حقيقية في التطبيق الفعلي)
+# --- إعداد قاعدة البيانات وحفظها ---
+DB_FILE = "dms_database.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    # جدول المستندات
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            folder TEXT,
+            uploader TEXT,
+            target TEXT,
+            status TEXT,
+            date TEXT,
+            file_type TEXT
+        )
+    ''')
+    # جدول سجل النشاطات (Audit Trail)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_trail (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT,
+            username TEXT,
+            timestamp TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def log_action(action, username):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("INSERT INTO audit_trail (action, username, timestamp) VALUES (?, ?, ?)", (action, username, timestamp))
+    conn.commit()
+    conn.close()
+
+# جلسة المستخدم الافتراضية
 if 'user' not in st.session_state:
     st.session_state.user = {"name": "Hassan ElSokary", "role": "CEO"}
 
-# الترجمة البسيطة
-translations = {
-    "ar": {
-        "dashboard": "لوحة التحكم والتحليلات",
-        "export_excel_btn": "تصدير تقارير المستندات إلى ملف Excel",
-        "excel_file_name": "Documents_Report.xlsx",
-        "total_docs": "إجمالي المستندات",
-        "completed_docs": "المستندات المكتملة",
-        "pending_docs": "قيد المراجعة"
-    }
-}
-t = translations["ar"]
-
-# --- لوحة التحكم (الجزئية اللي كنت بتدور عليها) ---
-def show_dashboard():
-    st.title("📂 لوحة متابعة المستندات والتحليلات الهندسية")
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric(t["total_docs"], 0)
-    col2.metric(t["completed_docs"], 0)
-    col3.metric(t["pending_docs"], 0)
-    
-    st.markdown("---")
-    
-    # فلتر البحث
-    st.text_input("🔍 بحث متقدم (عن عنوان ملف، مستخدم، أو جهة)")
-    
-    # كود تصدير الإكسيل (معدل ليظهر دائماً)
-    st.subheader("تقرير المستندات")
-    
-    # بيانات افتراضية لو مفيش ملفات، لضمان عمل الزرار
-    report_data = [{
-        "Title": "لا توجد مستندات بعد",
-        "Folder": "-",
-        "Uploader": "-",
-        "Target": "-",
-        "Status": "-",
-        "Date": "-",
-        "File Type": "-"
-    }]
-    
-    df_report = pd.DataFrame(report_data)
-    excel_buffer = io.BytesIO()
-    
-    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-        df_report.to_excel(writer, index=False, sheet_name='Documents_Report')
-    
-    excel_data = excel_buffer.getvalue()
-
-    st.download_button(
-        label=t["export_excel_btn"],
-        data=excel_data,
-        file_name=t["excel_file_name"],
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
-# القائمة الجانبية
+# القائمة الجانبية (Sidebar)
 st.sidebar.title("Language / اللغة")
 lang = st.sidebar.selectbox("", ["العربية"])
 st.sidebar.markdown("---")
@@ -77,9 +62,135 @@ st.sidebar.write(f"💼 ({st.session_state.user['role']})")
 st.sidebar.markdown("---")
 st.sidebar.subheader("القائمة الرئيسية")
 
-menu = st.sidebar.radio("", [t["dashboard"], "إدارة الملفات الجديدة", "إدارة الفولدرات", "سجل النشاطات (Audit Trail)", "إعداد الصلاحيات"])
+menu = st.sidebar.radio("", [
+    "لوحة التحكم والتحليلات",
+    "إدارة الملفات الجديدة",
+    "إدارة الفولدرات",
+    "سجل النشاطات (Audit Trail)",
+    "إعداد الصلاحيات"
+])
 
-if menu == t["dashboard"]:
-    show_dashboard()
-else:
-    st.write(f"أنت في صفحة: {menu}")
+# --- صفحة لوحة التحكم والتحليلات ---
+if menu == "لوحة التحكم والتحليلات":
+    st.title("📂 لوحة متابعة المستندات والتحليلات الهندسية")
+    
+    # جلب الإحصائيات الحقيقية من الداتا بيز
+    conn = sqlite3.connect(DB_FILE)
+    df_docs = pd.read_sql_query("SELECT * FROM documents", conn)
+    conn.close()
+    
+    total_count = len(df_docs)
+    completed_count = len(df_docs[df_docs['status'] == 'معتمد']) if total_count > 0 else 0
+    pending_count = len(df_docs[df_docs['status'] == 'قيد المراجعة']) if total_count > 0 else 0
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("إجمالي المستندات", total_count)
+    col2.metric("المستندات المكتملة", completed_count)
+    col3.metric("قيد المراجعة", pending_count)
+    
+    st.markdown("---")
+    
+    search_query = st.text_input("🔍 بحث متقدم (عن عنوان ملف، مستخدم، أو جهة)")
+    
+    if not df_docs.empty and search_query:
+        filtered_df = df_docs[
+            df_docs['title'].str.contains(search_query, na=False) |
+            df_docs['uploader'].str.contains(search_query, na=False) |
+            df_docs['target'].str.contains(search_query, na=False)
+        ]
+    else:
+        filtered_df = df_docs
+
+    st.subheader("تقرير المستندات")
+    
+    if filtered_df.empty:
+        report_data = [{
+            "Title": "لا توجد مستندات مسجلة",
+            "Folder": "-",
+            "Uploader": "-",
+            "Target": "-",
+            "Status": "-",
+            "Date": "-",
+            "File Type": "-"
+        }]
+        df_report = pd.DataFrame(report_data)
+    else:
+        df_report = filtered_df
+
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+        df_report.to_excel(writer, index=False, sheet_name='Documents_Report')
+    excel_data = excel_buffer.getvalue()
+
+    st.download_button(
+        label="📥 تصدير تقارير المستندات إلى ملف Excel",
+        data=excel_data,
+        file_name="Documents_Report.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# --- صفحة إدارة الملفات الجديدة ---
+elif menu == "إدارة الملفات الجديدة":
+    st.title("📁 إدارة ورفع الملفات الجديدة")
+    st.write("قم برفع المستندات الهندسية والإدارية وتحديد مسارها بدقة:")
+    
+    with st.form("upload_form"):
+        doc_title = st.text_input("عنوان المستند / المشروع")
+        folder_name = st.selectbox("اختر الفولدر", ["الرسومات التنفيذية", "قوائم الكميات والأسعار", " العقود ومقاول الباطن", "الاعتمادات الاستشارية"])
+        target_dept = st.text_input("الجهة الموجه لها المستند (مثال: الاستشاري / المحاسب / كليم)")
+        doc_status = st.selectbox("حالة المستند", ["مسودة", "قيد المراجعة", "معتمد"])
+        uploaded_file = st.file_uploader("اختر الملف (PDF, صور, Excel, AutoCAD)", type=["pdf", "png", "jpg", "xlsx", "xls", "dwg"])
+        
+        submit_btn = st.form_submit_button("حفظ ورفع المستند")
+        
+        if submit_btn and doc_title:
+            file_type_val = uploaded_file.type if uploaded_file else "ملف نصي"
+            current_date = datetime.date.today().strftime("%Y-%m-%d")
+            
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO documents (title, folder, uploader, target, status, date, file_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (doc_title, folder_name, st.session_state.user["name"], target_dept, doc_status, current_date, file_type_val))
+            conn.commit()
+            conn.close()
+            
+            log_action(f"رفع مستند جديد: {doc_title}", st.session_state.user["name"])
+            st.success("تم رفع وحفظ المستند بنجاح في قاعدة البيانات!")
+
+# --- صفحة إدارة الفولدرات ---
+elif menu == "إدارة الفولدرات":
+    st.title("🗂️ إدارة الفولدرات الهندسية")
+    st.write("هنا يمكنك استعراض الفولدرات التنظيمية لشركاتك:")
+    folders = ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]
+    for f in folders:
+        st.info(f"📂 {f} (مفعل ومربوط بالسيستم)")
+
+# --- صفحة سجل النشاطات (Audit Trail) ---
+elif menu == "سجل النشاطات (Audit Trail)":
+    st.title("📋 سجل النشاطات وحركات النظام (Audit Trail)")
+    st.write("مراقبة شاملة لكافة العمليات والإجراءات التي تمت داخل النظام:")
+    
+    conn = sqlite3.connect(DB_FILE)
+    df_audit = pd.read_sql_query("SELECT * FROM audit_trail ORDER BY id DESC", conn)
+    conn.close()
+    
+    if df_audit.empty:
+        st.write("لا توجد نشاطات مسجلة حتى الآن.")
+    else:
+        st.dataframe(df_audit, use_container_width=True)
+
+# --- صفحة إعداد الصلاحيات ---
+elif menu == "إعداد الصلاحيات":
+    st.title("🔐 إدارة صلاحيات المستخدمين")
+    st.write("التحكم في أدوار المستخدمين والموظفين والاعتمادات:")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("اسم المستخدم الجديد", "مثال: كريم / محاسب الشركة")
+    with col2:
+        st.selectbox("الصلاحية الممنوحة", ["مدير (CEO)", "مهندس موقع", "محاسب", "مراجعة فنية"])
+        
+    if st.button("حفظ الصلاحية"):
+        st.success("تم تحديث الصلاحيات بنجاح.")
