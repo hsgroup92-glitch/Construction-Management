@@ -16,7 +16,19 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, folder TEXT, uploader TEXT, target TEXT, status TEXT, date TEXT, file_type TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS audit_trail (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, username TEXT, timestamp TEXT)''')
-    conn.commit()
+    c.execute('''CREATE TABLE IF NOT EXISTS team_members (id INTEGER PRIMARY KEY AUTOINCREMENT, member TEXT, role TEXT, scope TEXT)''')
+    
+    # إدخال البيانات الافتراضية لو الجدول فاضي
+    c.execute("SELECT COUNT(*) FROM team_members")
+    if c.fetchone()[0] == 0:
+        default_team = [
+            ("Hassan ElSokary", "CEO", "Full System Access / صلاحيات كاملة"),
+            ("Omar Nour", "Project Manager", "Project & Drawings Management / إدارة المشاريع والرسومات"),
+            ("Mohamed Abdelazim", "Site Engineer", "Site Reports & Submissions / تقارير ورفع الموقع"),
+            ("Karim Mahmoud", "Accountant", "Financials, BOQ & Contracts / الشؤون المالية والعقود")
+        ]
+        c.executemany("INSERT INTO team_members (member, role, scope) VALUES (?, ?, ?)", default_team)
+        conn.commit()
     conn.close()
 
 init_db()
@@ -28,14 +40,6 @@ def log_action(action, username):
               (action, username, datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     conn.commit()
     conn.close()
-
-# أسماء فريق العمل كما طلبتها بالإنجليزية والعربية
-company_users = {
-    "Hassan ElSokary": {"role": "CEO", "name_ar": "مهندس/ حسن السكري (CEO)"},
-    "Omar Nour": {"role": "Project Manager", "name_ar": "مهندس/ عمر نور (Project Manager)"},
-    "Mohamed Abdelazim": {"role": "Site Engineer", "name_ar": "مهندس/ محمد عبد العظيم (Site Engineer)"},
-    "Karim Mahmoud": {"role": "Accountant", "name_ar": "محاسب/ كريم محمود (Accountant)"}
-}
 
 if 'user' not in st.session_state: 
     st.session_state.user = {"name": "Hassan ElSokary", "role": "CEO"}
@@ -57,14 +61,18 @@ except:
 st.sidebar.markdown("### HS Construction & Supply")
 st.sidebar.markdown("---")
 
-# اختيار المستخدم النشط من القائمة
-selected_user_key = st.sidebar.selectbox(
-    t("👤 المستخدم الحالي", "👤 Current User"), 
-    list(company_users.keys()),
-    format_func=lambda x: company_users[x]["name_ar"] if st.session_state.lang == "العربية" else f"{x} ({company_users[x]['role']})"
-)
-st.session_state.user = {"name": selected_user_key, "role": company_users[selected_user_key]["role"]}
+# جلب المستخدمين من القاعدة للقائمة الجانبية
+conn = sqlite3.connect(DB_FILE)
+df_team_sidebar = pd.read_sql_query("SELECT * FROM team_members", conn)
+conn.close()
 
+user_options = df_team_sidebar['member'].tolist()
+selected_user = st.sidebar.selectbox(t("👤 المستخدم الحالي", "👤 Current User"), user_options)
+
+current_role_row = df_team_sidebar[df_team_sidebar['member'] == selected_user]
+current_role = current_role_row['role'].values[0] if not current_role_row.empty else "CEO"
+
+st.session_state.user = {"name": selected_user, "role": current_role}
 st.sidebar.write(f"💼 Role: {st.session_state.user['role']}")
 st.sidebar.markdown("---")
 
@@ -110,7 +118,7 @@ if menu in ["لوحة التحكم والتحليلات", "Dashboard & Analytics
     )
     
     if not df_docs.empty:
-        st.dataframe(df_docs, use_container_width=True)
+        st.dataframe(df_docs, use_container_width=True, hide_index=True)
 
 
 # --- 2. إدارة الملفات الجديدة ---
@@ -125,14 +133,9 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
             ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]
         )
         
-        target_options = {
-            "العربية": ["مدير المشروع (Omar Nour)", "مهندس الموقع (Mohamed Abdelazim)", "المحاسب (Karim Mahmoud)", "الإدارة العليا (Hassan ElSokary)"],
-            "English": ["Project Manager (Omar Nour)", "Site Engineer (Mohamed Abdelazim)", "Accountant (Karim Mahmoud)", "Top Management (Hassan ElSokary)"]
-        }
-        target_dept = st.selectbox(
-            t("الجهة الموجه لها المستند", "Target Department"),
-            target_options[st.session_state.lang]
-        )
+        # الجهة المستهدفة مبنية على الأسماء الحالية في الفريق
+        target_list = [f"{row['role']} ({row['member']})" for _, row in df_team_sidebar.iterrows()]
+        target_dept = st.selectbox(t("الجهة الموجه لها المستند", "Target Department"), target_list)
         
         doc_status = st.selectbox(
             t("حالة المستند", "Document Status"), 
@@ -151,7 +154,7 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
             cursor.execute('''
                 INSERT INTO documents (title, folder, uploader, target, status, date, file_type)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (doc_title, folder_name, company_users[st.session_state.user["name"]]["name_ar"], target_dept, doc_status, str(datetime.date.today()), "ملف"))
+            ''', (doc_title, folder_name, st.session_state.user["name"], target_dept, doc_status, str(datetime.date.today()), "ملف"))
             conn.commit()
             conn.close()
             log_action(f"رفع مستند: {doc_title} موجه إلى {target_dept}", st.session_state.user["name"])
@@ -172,20 +175,56 @@ elif menu in ["سجل النشاطات (Audit Trail)", "Audit Trail"]:
     df_audit = pd.read_sql_query("SELECT * FROM audit_trail ORDER BY id DESC", conn)
     conn.close()
     if not df_audit.empty:
-        st.dataframe(df_audit, use_container_width=True)
+        st.dataframe(df_audit, use_container_width=True, hide_index=True)
     else:
         st.info(t("لا توجد نشاطات مسجلة حتى الآن.", "No audit logs recorded yet."))
 
 
 # --- 5. إعداد الصلاحيات ---
 elif menu in ["إعداد الصلاحيات", "Permissions"]:
-    st.title(t("🔐 صلاحيات فريق العمل", "🔐 Team Permissions"))
+    st.title(t("🔐 إدارة صلاحيات فريق العمل وإضافة المستخدمين", "🔐 Team Permissions & User Management"))
     
-    perms_data = [
-        {"Member": "Hassan ElSokary", "Role": "CEO", "Scope": "Full System Access / صلاحيات كاملة"},
-        {"Member": "Omar Nour", "Role": "Project Manager", "Scope": "Project & Drawings Management / إدارة المشاريع والرسومات"},
-        {"Member": "Mohamed Abdelazim", "Role": "Site Engineer", "Scope": "Site Reports & Submissions / تقارير ورفع الموقع"},
-        {"Member": "Karim Mahmoud", "Role": "Accountant", "Scope": "Financials, BOQ & Contracts / الشؤون المالية والعقود"}
-    ]
-    df_perms = pd.DataFrame(perms_data)
-    st.dataframe(df_perms, use_container_width=True)
+    # نموذج إضافة مستخدم جديد
+    with st.form("add_member_form"):
+        st.subheader(t("➕ إضافة عضو جديد لفريق العمل", "Add New Team Member"))
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            new_name = st.text_input(t("اسم العضو (مثال: Eng. Ahmed)", "Member Name"))
+        with col2:
+            new_role = st.text_input(t("الدور (مثال: Site Engineer)", "Role"))
+        with col3:
+            new_scope = st.text_input(t("نطاق الصلاحيات", "Scope"))
+            
+        submitted = st.form_submit_button(t("إضافة العضو", "Add Member"))
+        if submitted and new_name:
+            conn = sqlite3.connect(DB_FILE)
+            c = conn.cursor()
+            c.execute("INSERT INTO team_members (member, role, scope) VALUES (?, ?, ?)", (new_name, new_role, new_scope))
+            conn.commit()
+            conn.close()
+            log_action(f"إضافة عضو جديد: {new_name}", st.session_state.user["name"])
+            st.success(t("تم إضافة العضو بنجاح! حدّث الصفحة لرؤية التغيير.", "Member added successfully! Refresh to see changes."))
+            st.rerun()
+
+    st.markdown("---")
+    st.subheader(t("📝 تعديل بيانات وأسماء فريق العمل مباشرة", "Edit Team Members & Names Directly"))
+    st.info(t("يمكنك تعديل أي اسم أو دور أو صلاحية مباشرة في الجدول أدناه وسيتم الحفظ تلقائياً:", "You can edit any name, role, or scope directly in the table below:"))
+
+    # جدول قابل للتعديل (Data Editor) لتغيير الأسماء والصلاحيات مباشرة
+    conn = sqlite3.connect(DB_FILE)
+    df_team = pd.read_sql_query("SELECT * FROM team_members", conn)
+    conn.close()
+
+    edited_df = st.data_editor(df_team, hide_index=True, num_rows="dynamic", use_container_width=True)
+
+    if st.button(t("💾 حفظ التعديلات على الأسماء والصلاحيات", "💾 Save Changes to Names & Permissions")):
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("DELETE FROM team_members") # تفريغ القديم وتحديثه بالجديد
+        for _, row in edited_df.iterrows():
+            c.execute("INSERT INTO team_members (member, role, scope) VALUES (?, ?, ?)", (row['member'], row['role'], row['scope']))
+        conn.commit()
+        conn.close()
+        log_action("تعديل قائمة أسماء وصلاحيات فريق العمل", st.session_state.user["name"])
+        st.success(t("تم حفظ التعديلات بنجاح!", "Changes saved successfully!"))
+        st.rerun()
