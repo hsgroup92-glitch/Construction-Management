@@ -4,8 +4,8 @@ import io
 import sqlite3
 import datetime
 
-# إعداد الصفحة
-st.set_page_config(page_title="HS & Trigon - Project Management System", layout="wide")
+# إعداد الصفحة مع أيقونة العنوان الاحترافية
+st.set_page_config(page_title="HS & Trigon - Project Management System", page_icon="🏗️", layout="wide")
 
 # إعداد قاعدة البيانات المتقدمة للمشروعات والمقاولين
 DB_FILE = "projects_pro.db"
@@ -13,7 +13,6 @@ DB_FILE = "projects_pro.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # جدول المستندات والمشروعات
     c.execute('''CREATE TABLE IF NOT EXISTS docs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, 
                     title TEXT, 
@@ -25,7 +24,6 @@ def init_db():
                     date TEXT, 
                     uploader TEXT
                 )''')
-    # جدول سجل العمليات
     c.execute('''CREATE TABLE IF NOT EXISTS audit (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, 
                     action TEXT, 
@@ -45,16 +43,21 @@ def log(action, user):
     conn.commit()
     conn.close()
 
-# جلسة المستخدم
+# جلسة المستخدم بشكل صحيح (Dictionary متكامل)
 if 'user' not in st.session_state: 
-    st.session_state.user = "Hassan ElSokary (CEO)"
+    st.session_state.user = {"name": "Hassan ElSokary", "role": "CEO"}
 
-# القائمة الجانبية
-st.sidebar.title("إدارة الشركات والمشروعات")
-st.sidebar.write(f"👤 {st.session_state.user}")
+# القائمة الجانبية مع التنسيق السليم لبيانات المستخدم واللوجو
+st.sidebar.markdown("### 🏢 HS & Trigon")
+st.sidebar.markdown("---")
+st.sidebar.write(f"👤 {st.session_state.user['name']}")
+st.sidebar.write(f"💼 ({st.session_state.user['role']})")
+
 if st.sidebar.button("🚪 تسجيل الخروج"): 
+    log("تسجيل خروج", st.session_state.user['name'])
     st.stop()
 
+st.sidebar.markdown("---")
 menu = st.sidebar.radio("القائمة الرئيسية", [
     "لوحة التحكم الشاملة", 
     "إدارة الملفات والمشروعات", 
@@ -108,10 +111,10 @@ elif menu == "إدارة الملفات والمشروعات":
             conn = sqlite3.connect(DB_FILE)
             c = conn.cursor()
             c.execute("INSERT INTO docs (title, project_name, contractor, folder, status, amount, date, uploader) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
-                      (doc_title, project_name, contractor, folder_name, doc_status, amount, str(datetime.date.today()), st.session_state.user))
+                      (doc_title, project_name, contractor, folder_name, doc_status, amount, str(datetime.date.today()), st.session_state.user['name']))
             conn.commit()
             conn.close()
-            log(f"إضافة مستند للمشروع: {project_name} - المقاول: {contractor}", st.session_state.user)
+            log(f"إضافة مستند للمشروع: {project_name} - المقاول: {contractor}", st.session_state.user['name'])
             st.success("تم حفظ تفاصيل المشروع والمقاول بنجاح!")
 
 # --- 3. تقارير المقاولين والمستحقات ---
@@ -130,13 +133,12 @@ elif menu == "تقارير المقاولين والمستحقات":
         
         contractor_df = df[df['contractor'] == selected_contractor]
         
-        st.write(dashboard_title := f"### تقرير أعمال ومستحقات المقاول: {selected_contractor}")
+        st.markdown(f"### تقرير أعمال ومستحقات المقاول: {selected_contractor}")
         st.dataframe(contractor_df, use_container_width=True)
         
         total_contractor_amount = contractor_df['amount'].sum()
         st.metric("إجمالي مستخلصات وتعاملات هذا المقاول", f"{total_contractor_amount:,.2f} EGP")
         
-        # زر تصدير خاص بهذا المقاول
         buf_c = io.BytesIO()
         contractor_df.to_excel(buf_c, index=False)
         st.download_button(
