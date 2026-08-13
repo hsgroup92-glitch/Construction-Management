@@ -9,17 +9,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# القواميس الخاصة باللغات (عربي / إنجليزي)
 TRANSLATIONS = {
     "العربية": {
         "app_title": "🏗️ HS Construction & Supply",
-        "app_subtitle": "نظام إدارة المستندات والمشاريع الهندسية",
+        "app_subtitle": "نظام إدارة المستندات والمشاريع الهندسية المتطور",
         "sidebar_user": "المستخدم",
         "sidebar_title": "المسمى الوظيفي",
         "menu_title": "📂 القائمة الرئيسية",
-        "page_dashboard": "لوحة التحكم والمستندات",
+        "page_dashboard": "لوحة التحكم والتحليلات",
         "page_upload": "إدارة الملفات الجديدة",
         "page_folders": "إدارة الفولدرات",
+        "page_audit": "سجل النشاطات (Audit Trail)",
         "page_settings": "إعدادات الصلاحيات",
         "settings_avatar": "⚙️ إعدادات الحساب والصورة",
         "update_avatar": "تحديث صورة البروفايل",
@@ -29,17 +29,21 @@ TRANSLATIONS = {
         "password": "كلمة المرور",
         "login_btn": "دخول",
         "login_error": "كلمة المرور غير صحيحة",
-        "dash_title": "📁 لوحة متابعة المستندات والمشاريع",
+        "dash_title": "📁 لوحة متابعة المستندات والتحليلات الهندسية",
+        "search_box": "🔍 بحث متقدم (عن عنوان ملف، مستخدم، أو جهة)...",
         "filter_folder": "📂 تصفية حسب الفولدر",
         "all": "الكل",
-        "files_count": "الملفات المتاحة لعرضها",
+        "files_count": "الملفات المطابقة للبحث",
+        "metric_total": "إجمالي المستندات",
+        "metric_completed": "المستندات المكتملة",
+        "metric_review": "قيد المراجعة",
         "folder_lbl": "الفولدر",
         "target_lbl": "موجه إلى",
         "date_lbl": "تاريخ الرفع",
         "type_lbl": "نوع الملف",
         "viewed_by": "شوهد بواسطة",
         "no_one": "لا أحد بعد",
-        "download_btn": "تحميل الملف الأصلي",
+        "download_button": "تحميل الملف الأصلي",
         "comments_title": "التعليقات",
         "add_comment": "اضف تعليق جديد",
         "send_comment": "إرسال التعليق",
@@ -47,46 +51,48 @@ TRANSLATIONS = {
         "update_status": "تحديث حالة الرفع",
         "status_success": "تم تحديث الحالة!",
         "delete_file_btn": "🗑️ حذف هذا الملف نهائياً",
-        "file_deleted": "تم حذف الملف نهائياً بناءً على طلبك!",
+        "file_deleted": "تم حذف الملف نهائياً وتسجيل الحدث!",
         "upload_title": "📤 رفع ملف، صورة، أو فيديو جديد",
         "select_target_folder": "اختر الفولدر المخصص للملف",
         "file_title_lbl": "عنوان الملف / المستند",
         "target_person_lbl": "موجه إلى الشخص",
         "initial_status_lbl": "حالة الرفع",
-        "file_uploader_lbl": "اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)",
+        "file_uploader_lbl": "اختر ملف (مستند PDF، صور، أو فيديو)",
         "upload_btn_sys": "رفع الملف وإرساله للنظام",
-        "upload_success": "تم رفع الملف بنجاح وحفظه بشكل دائم في النظام!",
+        "upload_success": "تم رفع الملف بنجاح وتوثيقه في سجل النشاطات!",
         "upload_warning": "يرجى كتابة عنوان الملف، اختيار الجهة الموجه لها الملف، وإرفاق الملف المطلوب.",
-        "folders_mgmt_title": "📁 إدارة الفولدرات (إنشاء وتعديل وتسمية)",
+        "folders_mgmt_title": "📁 إدارة الفولدرات",
         "create_folder_sub": "➕ إنشاء فولدر جديد",
         "new_folder_input": "اسم الفولدر الجديد",
         "add_folder_btn": "إضافة الفولدر",
         "folder_success": "تم إنشاء الفولدر '{name}' بنجاح!",
         "folder_exists": "هذا الفولدر موجود مسبقاً.",
         "folder_empty_warn": "يرجى إدخال اسم صحيح للفولدر.",
-        "edit_folders_sub": "✏️ تعديل أو إعادة تسمية الفولدرات الحالية",
+        "edit_folders_sub": "✏️ تعديل أو إعادة تسمية الفولدرات",
         "edit_folder_input": "تعديل اسم الفولدر",
         "save_edit_btn": "حفظ التعديل",
-        "folder_edit_success": "تم تعديل اسم الفولدر بنجاح!",
-        "permissions_title": "⚙️ إدارة صلاحيات المستخدمين وحذفهم",
-        "ceo_info": "بصفتك المدير التنفيذي (CEO)، يمكنك تعديل بيانات المستخدمين، كلمات المرور، حذف مستخدم، أو إضافة مستخدم جديد.",
-        "add_user_sub": "➕ إضافة مستخدم جديد للنظام",
-        "new_u_name": "اسم المستخدم الجديد (الاسم الكامل)",
+        "folder_edit_success": "تم تعديل اسم الفولدر وتحديث الملفات المرتبطة!",
+        "audit_title": "📋 سجل نشاطات النظام (Audit Trail)",
+        "audit_desc": "هذا السجل يوضح كافة العمليات التي تمت في النظام لضمان الرقابة والشفافية الهندسية:",
+        "permissions_title": "⚙️ إدارة صلاحيات المستخدمين",
+        "ceo_info": "صلاحيات المدير التنفيذي (CEO): إدارة المستخدمين بالكامل.",
+        "add_user_sub": "➕ إضافة مستخدم جديد",
+        "new_u_name": "اسم المستخدم (الاسم الكامل)",
         "new_u_pass": "كلمة المرور",
-        "new_u_title": "المسمى الوظيفي (مثال: محاسب، مهندس...)",
+        "new_u_title": "المسمى الوظيفي",
         "new_u_role": "الدور في النظام",
-        "add_user_btn": "إضافة المستخدم الجديد",
+        "add_user_btn": "إضافة المستخدم",
         "user_added_success": "تم إضافة المستخدم '{name}' بنجاح!",
-        "user_exists_warn": "هذا المستخدم موجود مسبقاً.",
-        "user_empty_warn": "يرجى إدخال اسم المستخدم وكلمة المرور.",
-        "edit_users_sub": "👥 تعديل أو حذف المستخدمين الحاليين",
-        "save_changes_btn": "حفظ التعديلات لـ",
-        "delete_user_btn": "🗑️ حذف المستخدم",
-        "user_deleted_warn": "تم حذف المستخدم {name} بنجاح!",
-        "staff_info": "يمكنك تعديل كلمة المرور الخاصة بحسابك الشخصي.",
+        "user_exists_warn": "المستخدم موجود مسبقاً.",
+        "user_empty_warn": "يرجى إدخال البيانات كاملة.",
+        "edit_users_sub": "👥 تعديل أو حذف المستخدمين",
+        "save_changes_btn": "حفظ",
+        "delete_user_btn": "🗑️ حذف",
+        "user_deleted_warn": "تم حذف المستخدم {name}",
+        "staff_info": "تعديل كلمة المرور الشخصية.",
         "new_pass_lbl": "كلمة المرور الجديدة",
-        "save_pass_btn": "حفظ كلمة المرور",
-        "pass_updated_success": "تم تحديث كلمة المرور بنجاح!",
+        "save_pass_btn": "حفظ",
+        "pass_updated_success": "تم التحديث بنجاح!",
         "status_completed": "مكتمل",
         "status_incomplete": "غير مكتمل",
         "status_review": "قيد المراجعة",
@@ -94,13 +100,14 @@ TRANSLATIONS = {
     },
     "English": {
         "app_title": "🏗️ HS Construction & Supply",
-        "app_subtitle": "Document & Engineering Project Management System",
+        "app_subtitle": "Advanced Document & Engineering Project Management System",
         "sidebar_user": "User",
         "sidebar_title": "Title",
         "menu_title": "📂 Main Menu",
-        "page_dashboard": "Dashboard & Documents",
+        "page_dashboard": "Dashboard & Analytics",
         "page_upload": "Upload New File",
         "page_folders": "Manage Folders",
+        "page_audit": "Audit Trail & Activity Log",
         "page_settings": "Permissions & Settings",
         "settings_avatar": "⚙️ Account & Avatar Settings",
         "update_avatar": "Update Profile Picture",
@@ -110,10 +117,14 @@ TRANSLATIONS = {
         "password": "Password",
         "login_btn": "Login",
         "login_error": "Incorrect Password",
-        "dash_title": "📁 Documents & Projects Dashboard",
+        "dash_title": "📁 Documents & Engineering Analytics Dashboard",
+        "search_box": "🔍 Advanced Search (Title, User, Recipient)...",
         "filter_folder": "📂 Filter by Folder",
         "all": "All",
-        "files_count": "Available Files to Display",
+        "files_count": "Matching Files",
+        "metric_total": "Total Documents",
+        "metric_completed": "Completed",
+        "metric_review": "Under Review",
         "folder_lbl": "Folder",
         "target_lbl": "Targeted To",
         "date_lbl": "Upload Date",
@@ -128,45 +139,47 @@ TRANSLATIONS = {
         "update_status": "Update Status",
         "status_success": "Status updated successfully!",
         "delete_file_btn": "🗑️ Delete this file permanently",
-        "file_deleted": "File deleted permanently based on your request!",
+        "file_deleted": "File deleted permanently and logged!",
         "upload_title": "📤 Upload New File, Image, or Video",
         "select_target_folder": "Select Folder for File",
         "file_title_lbl": "File / Document Title",
         "target_person_lbl": "Target Person",
         "initial_status_lbl": "Upload Status",
-        "file_uploader_lbl": "Choose File (Document, JPG/PNG Images, or MP4 Video)",
+        "file_uploader_lbl": "Choose File (PDF, Images, or Video)",
         "upload_btn_sys": "Upload and Send to System",
-        "upload_success": "File uploaded successfully and saved permanently in the system!",
-        "upload_warning": "Please enter the file title, select the target recipient, and attach the required file.",
-        "folders_mgmt_title": "📁 Folders Management (Create, Edit, Rename)",
+        "upload_success": "File uploaded successfully and logged in Audit Trail!",
+        "upload_warning": "Please enter the file title, select target, and attach file.",
+        "folders_mgmt_title": "📁 Folders Management",
         "create_folder_sub": "➕ Create New Folder",
         "new_folder_input": "New Folder Name",
         "add_folder_btn": "Add Folder",
         "folder_success": "Folder '{name}' created successfully!",
         "folder_exists": "This folder already exists.",
         "folder_empty_warn": "Please enter a valid folder name.",
-        "edit_folders_sub": "✏️ Edit or Rename Existing Folders",
+        "edit_folders_sub": "✏️ Edit or Rename Folders",
         "edit_folder_input": "Edit Folder Name",
         "save_edit_btn": "Save Changes",
-        "folder_edit_success": "Folder name updated successfully!",
+        "folder_edit_success": "Folder updated successfully!",
+        "audit_title": "📋 System Audit Trail & Activity Log",
+        "audit_desc": "This log tracks all actions executed in the system for complete governance:",
         "permissions_title": "⚙️ Manage Users & Permissions",
-        "ceo_info": "As CEO, you can edit user details, passwords, delete users, or add new users.",
+        "ceo_info": "CEO Privileges: Full user management control.",
         "add_user_sub": "➕ Add New System User",
         "new_u_name": "New Username (Full Name)",
         "new_u_pass": "Password",
-        "new_u_title": "Job Title (e.g., Accountant, Engineer...)",
+        "new_u_title": "Job Title",
         "new_u_role": "System Role",
         "add_user_btn": "Add New User",
         "user_added_success": "User '{name}' added successfully!",
-        "user_exists_warn": "This user already exists.",
-        "user_empty_warn": "Please enter username and password.",
+        "user_exists_warn": "User already exists.",
+        "user_empty_warn": "Please fill all fields.",
         "edit_users_sub": "👥 Edit or Delete Existing Users",
-        "save_changes_btn": "Save changes for",
-        "delete_user_btn": "🗑️ Delete User",
-        "user_deleted_warn": "User {name} deleted successfully!",
-        "staff_info": "You can update your personal account password.",
+        "save_changes_btn": "Save",
+        "delete_user_btn": "Delete",
+        "user_deleted_warn": "User {name} deleted",
+        "staff_info": "Update personal password.",
         "new_pass_lbl": "New Password",
-        "save_pass_btn": "Save Password",
+        "save_pass_btn": "Save",
         "pass_updated_success": "Password updated successfully!",
         "status_completed": "Completed",
         "status_incomplete": "Incomplete",
@@ -175,7 +188,6 @@ TRANSLATIONS = {
     }
 }
 
-# اختيار اللغة (افتراضياً العربية)
 if "lang" not in st.session_state:
     st.session_state.lang = "العربية"
 
@@ -183,9 +195,35 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users_v3.json")
 FILES_FILE = os.path.join(BASE_DIR, "files_db.json")
 FOLDERS_FILE = os.path.join(BASE_DIR, "folders_db.json")
+AUDIT_FILE = os.path.join(BASE_DIR, "audit_log.json")
 
 if not os.path.exists(os.path.join(BASE_DIR, "avatars")):
     os.makedirs(os.path.join(BASE_DIR, "avatars"))
+
+def log_activity(username, action_desc):
+    logs = []
+    if os.path.exists(AUDIT_FILE):
+        try:
+            with open(AUDIT_FILE, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        except:
+            logs = []
+    logs.insert(0, {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "user": username,
+        "action": action_desc
+    })
+    with open(AUDIT_FILE, "w", encoding="utf-8") as f:
+        json.dump(logs[:200], f, ensure_ascii=False, indent=4) # حفظ آخر 200 حركة
+
+def load_audit_logs():
+    if not os.path.exists(AUDIT_FILE):
+        return []
+    try:
+        with open(AUDIT_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
 
 def init_users():
     if not os.path.exists(USERS_FILE):
@@ -203,7 +241,7 @@ def load_users():
     try:
         with open(USERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except:
         init_users()
         with open(USERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -222,7 +260,7 @@ def load_files():
     try:
         with open(FILES_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except:
         return []
 
 def save_files(files):
@@ -240,7 +278,7 @@ def load_folders():
     try:
         with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except:
         return ["المستندات العامة", "الحسابات والماليات", "رسومات الشوب دروينج", "عروض الأسعار"]
 
 def save_folders(folders):
@@ -260,7 +298,6 @@ if "logged_in" not in st.session_state:
 if "current_page" not in st.session_state:
     st.session_state.current_page = t["page_dashboard"]
 
-# زر اختيار اللغة في الشريط الجانبي أو الأعلى
 selected_lang = st.sidebar.selectbox("🌐 Language / اللغة", ["العربية", "English"], index=0 if st.session_state.lang=="العربية" else 1)
 if selected_lang != st.session_state.lang:
     st.session_state.lang = selected_lang
@@ -290,6 +327,7 @@ if not st.session_state.logged_in:
             if password == users[selected_user]["password"]:
                 st.session_state.logged_in = True
                 st.session_state.username = selected_user
+                log_activity(selected_user, "تسجيل الدخول إلى النظام")
                 st.rerun()
             else:
                 st.error(t["login_error"])
@@ -313,7 +351,7 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.markdown(t["menu_title"])
     
-    pages = [t["page_dashboard"], t["page_upload"], t["page_folders"], t["page_settings"]]
+    pages = [t["page_dashboard"], t["page_upload"], t["page_folders"], t["page_audit"], t["page_settings"]]
     
     for page in pages:
         button_label = f"📍 {page}" if st.session_state.current_page == page else f"📁 {page}"
@@ -335,10 +373,12 @@ else:
                 f.write(uploaded_avatar.getbuffer())
             users[current_user]["avatar"] = avatar_path
             save_users(users)
+            log_activity(current_user, "تحديث صورة البروفايل الشخصي")
             st.success(t["update_btn"])
             st.rerun()
 
     if st.sidebar.button(t["logout"], use_container_width=True):
+        log_activity(current_user, "تسجيل الخروج من النظام")
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
@@ -349,6 +389,17 @@ else:
         st.title(t["dash_title"])
         all_files = load_files()
         folders = load_folders()
+
+        # لوحة المؤشرات (Metrics Analytics)
+        total_docs = len(all_files)
+        completed_docs = len([f for f in all_files if f.get("status") in [t["status_completed"], "Completed", "مكتمل"]])
+        review_docs = len([f for f in all_files if f.get("status") in [t["status_review"], "Under Review", "قيد المراجعة"]])
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric(t["metric_total"], total_docs)
+        m2.metric(t["metric_completed"], completed_docs)
+        m3.metric(t["metric_review"], review_docs)
+        st.markdown("---")
         
         if role == "Accountant":
             filtered_files = [f for f in all_files if current_user in f.get("target", []) or "الكل" in f.get("target", []) or "All" in f.get("target", [])]
@@ -357,9 +408,16 @@ else:
         else:
             filtered_files = all_files
 
-        selected_folder_filter = st.selectbox(t["filter_folder"], [t["all"]] + folders)
-        if selected_folder_filter != t["all"]:
-            filtered_files = [f for f in filtered_files if f.get("folder", "المستندات العامة") == selected_folder_filter]
+        # أدوات التصفية والبحث المتقدم
+        col_f1, col_f2 = st.columns([1, 2])
+        with col_f1:
+            selected_folder_filter = st.selectbox(t["filter_folder"], [t["all"]] + folders)
+            if selected_folder_filter != t["all"]:
+                filtered_files = [f for f in filtered_files if f.get("folder", "المستندات العامة") == selected_folder_filter]
+        with col_f2:
+            search_query = st.text_input(t["search_box"])
+            if search_query:
+                filtered_files = [f for f in filtered_files if search_query.lower() in f.get("title", "").lower() or search_query.lower() in f.get("uploader", "").lower() or any(search_query.lower() in t_item.lower() for t_item in f.get("target", []))]
 
         st.subheader(f"{t['files_count']} ({len(filtered_files)})")
 
@@ -389,6 +447,8 @@ else:
                             st.image(file_bytes, caption=file_info.get('title'), use_container_width=True)
                         elif file_info.get("file_type") in ["video/mp4", "video/mov"]:
                             st.video(file_bytes)
+                        elif file_info.get("file_type") == "application/pdf":
+                            st.info("📄 PDF Document available for review/download.")
                         
                         st.download_button(
                             label=f"📥 {t.get('download_button', 'Download')} : {file_info.get('file_name', 'document')}",
@@ -416,6 +476,7 @@ else:
                         })
                         file_info["comments"] = comments
                         save_files(all_files)
+                        log_activity(current_user, f"إضافة تعليق على المستند: {file_info.get('title')}")
                         st.success(t["comment_success"])
                         st.rerun()
 
@@ -430,6 +491,7 @@ else:
                     if new_status != file_info.get("status"):
                         file_info["status"] = new_status
                         save_files(all_files)
+                        log_activity(current_user, f"تحديث حالة الملف '{file_info.get('title')}' إلى: {new_status}")
                         st.success(t["status_success"])
                         st.rerun()
 
@@ -437,6 +499,7 @@ else:
                     if st.button(t["delete_file_btn"], key=f"delete_file_{idx}"):
                         all_files.remove(file_info)
                         save_files(all_files)
+                        log_activity(current_user, f"حذف الملف نهائياً: {file_info.get('title')}")
                         st.warning(t["file_deleted"])
                         st.rerun()
 
@@ -470,6 +533,7 @@ else:
                 }
                 all_files.append(new_entry)
                 save_files(all_files)
+                log_activity(current_user, f"رفع مستند جديد بعنوان: {file_title} في فولدر '{selected_folder}'")
                 st.success(t["upload_success"])
             else:
                 st.warning(t["upload_warning"])
@@ -484,6 +548,7 @@ else:
             if new_folder_name and new_folder_name not in folders:
                 folders.append(new_folder_name)
                 save_folders(folders)
+                log_activity(current_user, f"إنشاء فولدر جديد: {new_folder_name}")
                 st.success(t["folder_success"].format(name=new_folder_name))
                 st.rerun()
             elif new_folder_name in folders:
@@ -511,9 +576,17 @@ else:
                             if file_item.get("folder") == old_name:
                                 file_item["folder"] = updated_name
                         save_files(all_files)
-                        
+                        log_activity(current_user, f"إعادة تسمية الفولدر من '{old_name}' إلى '{updated_name}'")
                         st.success(t["folder_edit_success"])
                         st.rerun()
+
+    elif choice == t["page_audit"]:
+        st.title(t["audit_title"])
+        st.write(t["audit_desc"])
+        audit_logs = load_audit_logs()
+        
+        for log in audit_logs:
+            st.markdown(f"🕒 **{log['time']}** | 👤 **{log['user']}**: {log['action']}")
 
     elif choice == t["page_settings"]:
         st.title(t["permissions_title"])
@@ -539,6 +612,7 @@ else:
                             "avatar": ""
                         }
                         save_users(users)
+                        log_activity(current_user, f"إضافة مستخدم جديد للنظام: {new_u_name}")
                         st.success(t["user_added_success"].format(name=new_u_name))
                         st.rerun()
                 else:
@@ -558,6 +632,7 @@ else:
                             users[uname]["password"] = new_pass
                             users[uname]["title"] = new_title
                             save_users(users)
+                            log_activity(current_user, f"تعديل بيانات وصلاحيات المستخدم: {uname}")
                             st.success(t["update_btn"])
                             st.rerun()
                     with col_del2:
@@ -565,6 +640,7 @@ else:
                             if st.button(f"{t['delete_user_btn']} {uname}", key=f"del_{uname}"):
                                 del users[uname]
                                 save_users(users)
+                                log_activity(current_user, f"حذف المستخدم: {uname}")
                                 st.warning(t["user_deleted_warn"].format(name=uname))
                                 st.rerun()
         else:
@@ -574,4 +650,5 @@ else:
             if st.button(t["save_pass_btn"]):
                 users[current_user]["password"] = new_pass
                 save_users(users)
+                log_activity(current_user, "تغيير كلمة المرور الشخصية")
                 st.success(t["pass_updated_success"])
