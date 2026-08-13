@@ -40,12 +40,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-USERS_FILE = "users_v3.json"
-FILES_FILE = "files_db.json"
-FOLDERS_FILE = "folders_db.json"
+# مسارات ثابتة ومطلقة لضمان عدم ضياع الداتا أبداً
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USERS_FILE = os.path.join(BASE_DIR, "users_v3.json")
+FILES_FILE = os.path.join(BASE_DIR, "files_db.json")
+FOLDERS_FILE = os.path.join(BASE_DIR, "folders_db.json")
 
-if not os.path.exists("avatars"):
-    os.makedirs("avatars")
+if not os.path.exists(os.path.join(BASE_DIR, "avatars")):
+    os.makedirs(os.path.join(BASE_DIR, "avatars"))
 
 def init_users():
     if not os.path.exists(USERS_FILE):
@@ -60,8 +62,13 @@ def init_users():
 
 def load_users():
     init_users()
-    with open(USERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        init_users()
+        with open(USERS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
 
 def save_users(users):
     with open(USERS_FILE, "w", encoding="utf-8") as f:
@@ -74,8 +81,11 @@ def init_files():
 
 def load_files():
     init_files()
-    with open(FILES_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(FILES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
 
 def save_files(files):
     with open(FILES_FILE, "w", encoding="utf-8") as f:
@@ -89,8 +99,11 @@ def init_folders():
 
 def load_folders():
     init_folders()
-    with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(FOLDERS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return ["المستندات العامة", "الحسابات والماليات", "رسومات الشوب دروينج", "عروض الأسعار"]
 
 def save_folders(folders):
     with open(FOLDERS_FILE, "w", encoding="utf-8") as f:
@@ -163,12 +176,13 @@ else:
     st.sidebar.markdown("---")
 
     with st.sidebar.expander("⚙️ إعدادات الحساب والصورة"):
-        if user_data.get("avatar") and os.path.exists(user_data["avatar"]):
-            st.image(user_data["avatar"], width=80)
+        avatar_file_path = user_data.get("avatar", "")
+        if avatar_file_path and os.path.exists(avatar_file_path):
+            st.image(avatar_file_path, width=80)
         
         uploaded_avatar = st.file_uploader("تحديث صورة البروفايل", type=['jpg', 'png', 'jpeg'])
         if uploaded_avatar is not None:
-            avatar_path = f"avatars/{current_user}.png"
+            avatar_path = os.path.join(BASE_DIR, "avatars", f"{current_user}.png")
             with open(avatar_path, "wb") as f:
                 f.write(uploaded_avatar.getbuffer())
             users[current_user]["avatar"] = avatar_path
@@ -204,6 +218,7 @@ else:
         for idx, file_info in enumerate(filtered_files):
             targets_str = ", ".join(file_info.get('target', [])) if isinstance(file_info.get('target'), list) else file_info.get('target')
             folder_name = file_info.get('folder', 'المستندات العامة')
+            
             with st.expander(f"📁 [{folder_name}] 📌 عنوان الملف: {file_info.get('title')} | الحالة: {file_info.get('status')} (بواسطة: {file_info.get('uploader')})"):
                 col_a, col_b = st.columns(2)
                 with col_a:
@@ -266,6 +281,14 @@ else:
                         st.success("تم تحديث الحالة!")
                         st.rerun()
 
+                # زر حذف الملف (متاح فقط للمدير التنفيذي أو الشخص الرافض للملف بقرار شخصي)
+                if role == "CEO" or file_info.get("uploader") == current_user:
+                    if st.button(f"🗑️ حذف هذا الملف نهائياً", key=f"delete_file_{idx}"):
+                        all_files.remove(file_info)
+                        save_files(all_files)
+                        st.warning("تم حذف الملف نهائياً بناءً على طلبك!")
+                        st.rerun()
+
     elif choice == "إدارة الملفات الجديدة":
         st.title("📤 رفع ملف، صورة، أو فيديو جديد")
         folders = load_folders()
@@ -273,7 +296,6 @@ else:
         
         selected_folder = st.selectbox("اختر الفولدر المخصص للملف", folders)
         file_title = st.text_input("عنوان الملف / المستند")
-        # تم إزالة كلمة المحاسب تماماً لتظهر أسامي الأشخاص فقط
         target_persons = st.multiselect("موجه إلى الشخص", ["الكل"] + active_users)
         initial_status = st.selectbox("حالة الرفع", ["غير مكتمل", "قيد المراجعة", "مكتمل"])
         uploaded_file = st.file_uploader("اختر ملف (مستند، صور JPG/PNG، أو فيديو MP4)", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg", "mp4", "mov"])
@@ -297,7 +319,7 @@ else:
                 }
                 all_files.append(new_entry)
                 save_files(all_files)
-                st.success("تم رفع الملف بنجاح وإتاحته في الفولدر المخصص!")
+                st.success("تم رفع الملف بنجاح وحفظه بشكل دائم في النظام!")
             else:
                 st.warning("يرجى كتابة عنوان الملف، اختيار الجهة الموجه لها الملف، وإرفاق الملف المطلوب.")
 
