@@ -16,6 +16,7 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, folder TEXT, uploader TEXT, target TEXT, status TEXT, date TEXT, file_type TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS audit_trail (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, username TEXT, timestamp TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS system_users (id INTEGER PRIMARY KEY AUTOINCREMENT, fullname TEXT, username TEXT, role TEXT)''')
     conn.commit()
     conn.close()
 
@@ -29,7 +30,6 @@ def log_action(action, username):
     conn.commit()
     conn.close()
 
-# المستخدمين في الشركة
 company_users = {
     "Hassan ElSokary": {"role": "CEO / المدير التنفيذي", "name_ar": "حسن السكري (المدير التنفيذي)", "perms": "صلاحيات كاملة (إدارة، اعتماد، تعديل، حذف، تصدير)"},
     "Karim": {"role": "Project Coordinator / منسق مشاريع", "name_ar": "كريم (منسق المشاريع)", "perms": "رفع ومراجعة وتنسيق الملفات والمستندات"},
@@ -178,16 +178,29 @@ elif menu in ["سجل النشاطات (Audit Trail)", "Audit Trail"]:
 
 # --- 5. إعداد الصلاحيات ---
 elif menu in ["إعداد الصلاحيات", "Permissions"]:
-    st.title(t("🔐 إدارة الصلاحيات ومستخدمي النظام", "🔐 Permissions & Users Management"))
+    st.title(t("🔐 إدارة صلاحيات المستخدمين", "🔐 Users & Permissions Management"))
     
-    st.subheader(t("👤 المستخدم النشط حالياً", "Current Active User"))
-    st.success(f"**{company_users[st.session_state.user['name']]['name_ar']}** — {st.session_state.user['role']}")
-    st.info(t("الصلاحية الممنوحة: ", "Assigned Permission: ") + company_users[st.session_state.user['name']]["perms"])
-    
+    st.markdown(f"### ➕ {t('إضافة مستخدم جديد', 'Add New User')}")
+    with st.form("add_user_form"):
+        new_fullname = st.text_input(t("اسم المستخدم (الاسم الكامل)", "Full Name"))
+        new_username = st.text_input(t("اسم الدخول (Username)", "Username"))
+        new_password = st.text_input(t("كلمة المرور", "Password"), type="password")
+        new_job_title = st.text_input(t("المسمى الوظيفي", "Job Title"))
+        new_role = st.selectbox(t("الدور في النظام", "System Role"), ["CEO", "Project Manager", "Site Engineer", "Accountant"])
+        
+        submit_user = st.form_submit_button(t("إضافة المستخدم", "Add User"))
+        if submit_user and new_fullname:
+            conn = sqlite3.connect(DB_FILE)
+            c = conn.cursor()
+            c.execute("INSERT INTO system_users (fullname, username, role) VALUES (?, ?, ?)", (new_fullname, new_username, new_role))
+            conn.commit()
+            conn.close()
+            log_action(f"إضافة مستخدم جديد: {new_fullname}", st.session_state.user["name"])
+            st.success(t("تم إضافة المستخدم بنجاح!", "User added successfully!"))
+
     st.markdown("---")
     st.subheader(t("📋 جدول صلاحيات أدوار الشركة", "Company Roles & Permissions Table"))
     
-    # جدول يوضح كل مستخدم وصلاحياته في النظام
     perms_data = []
     for k, v in company_users.items():
         perms_data.append({
@@ -201,7 +214,6 @@ elif menu in ["إعداد الصلاحيات", "Permissions"]:
     st.markdown("---")
     st.subheader(t("🛠️ تتبع التعديلات والعمليات الأخيرة للمستخدم", "Track Recent User Modifications & Actions"))
     
-    # عرض العمليات الخاصة بالمستخدم الحالي فقط من جدول الـ Audit Trail
     conn = sqlite3.connect(DB_FILE)
     df_user_actions = pd.read_sql_query(
         "SELECT action, timestamp FROM audit_trail WHERE username = ? ORDER BY id DESC", 
