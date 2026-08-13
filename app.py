@@ -14,22 +14,8 @@ DB_FILE = "dms_database.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS documents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    title TEXT, 
-                    folder TEXT, 
-                    uploader TEXT, 
-                    target TEXT, 
-                    status TEXT, 
-                    date TEXT, 
-                    file_type TEXT
-                )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS audit_trail (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    action TEXT, 
-                    username TEXT, 
-                    timestamp TEXT
-                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, folder TEXT, uploader TEXT, target TEXT, status TEXT, date TEXT, file_type TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS audit_trail (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, username TEXT, timestamp TEXT)''')
     conn.commit()
     conn.close()
 
@@ -43,8 +29,18 @@ def log_action(action, username):
     conn.commit()
     conn.close()
 
-if 'user' not in st.session_state: st.session_state.user = {"name": "Hassan ElSokary", "role": "CEO"}
-if 'lang' not in st.session_state: st.session_state.lang = "العربية"
+# المستخدمين في الشركة
+company_users = {
+    "Hassan ElSokary": {"role": "CEO / المدير التنفيذي", "name_ar": "حسن السكري (المدير التنفيذي)", "perms": "صلاحيات كاملة (إدارة، اعتماد، تعديل، حذف، تصدير)"},
+    "Karim": {"role": "Project Coordinator / منسق مشاريع", "name_ar": "كريم (منسق المشاريع)", "perms": "رفع ومراجعة وتنسيق الملفات والمستندات"},
+    "Site Engineer": {"role": "Site Engineer / مهندس موقع", "name_ar": "مهندس الموقع", "perms": "رفع رسومات وتقارير الموقع والاطلاع عليها"},
+    "Accountant": {"role": "Accountant / المحاسب", "name_ar": "المحاسب", "perms": "الاطلاع على قوائم الكميات والعقود والتقارير المالية"}
+}
+
+if 'user' not in st.session_state: 
+    st.session_state.user = {"name": "Hassan ElSokary", "role": "CEO"}
+if 'lang' not in st.session_state: 
+    st.session_state.lang = "العربية"
 
 def t(ar, en): return ar if st.session_state.lang == "العربية" else en
 
@@ -59,8 +55,16 @@ except:
     pass
 
 st.sidebar.markdown("### HS Construction & Supply")
-st.sidebar.write(f"👤 {st.session_state.user['name']}")
-st.sidebar.write(f"💼 ({st.session_state.user['role']})")
+st.sidebar.markdown("---")
+
+selected_user_key = st.sidebar.selectbox(
+    t("👤 المستخدم الحالي", "👤 Current User"), 
+    list(company_users.keys()),
+    format_func=lambda x: company_users[x]["name_ar"] if st.session_state.lang == "العربية" else x
+)
+st.session_state.user = {"name": selected_user_key, "role": company_users[selected_user_key]["role"]}
+
+st.sidebar.write(f"💼 {st.session_state.user['role']}")
 st.sidebar.markdown("---")
 
 menu_options = {
@@ -71,6 +75,7 @@ menu = st.sidebar.radio(t("القائمة الرئيسية", "Main Menu"), menu_
 
 st.sidebar.markdown("---")
 if st.sidebar.button(t("🚪 تسجيل الخروج", "🚪 Logout")):
+    log_action("تسجيل خروج", st.session_state.user["name"])
     st.stop()
 
 
@@ -119,7 +124,6 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
             ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]
         )
         
-        # القائمة المنسدلة للجهة الموجه لها المستند (بالأسماء المطلوبة)
         target_options = {
             "العربية": ["مدير المشروع", "مهندس الموقع", "المحاسب", "الإدارة العليا (لي أنا)"],
             "English": ["Project Manager", "Site Engineer", "Accountant", "Top Management (Me)"]
@@ -156,8 +160,7 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
 # --- 3. إدارة الفولدرات ---
 elif menu in ["إدارة الفولدرات", "Manage Folders"]:
     st.title(t("🗂️ إدارة الفولدرات الهندسية", "🗂️ Engineering Folders Management"))
-    folders_list = ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]
-    for f in folders_list:
+    for f in ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]:
         st.info(f"📂 {f} - " + t("مفعل وجاهز للاستخدام", "Active and ready"))
 
 
@@ -175,6 +178,39 @@ elif menu in ["سجل النشاطات (Audit Trail)", "Audit Trail"]:
 
 # --- 5. إعداد الصلاحيات ---
 elif menu in ["إعداد الصلاحيات", "Permissions"]:
-    st.title(t("🔐 إدارة الصلاحيات", "🔐 Manage Permissions"))
-    st.success(t("النظام يعمل بكامل الصلاحيات لحساب:", "System operating with full permissions for account:") + f" {st.session_state.user['name']}")
-    st.info(t("الدور الحالي: المدير التنفيذي (CEO)", "Current Role: CEO"))
+    st.title(t("🔐 إدارة الصلاحيات ومستخدمي النظام", "🔐 Permissions & Users Management"))
+    
+    st.subheader(t("👤 المستخدم النشط حالياً", "Current Active User"))
+    st.success(f"**{company_users[st.session_state.user['name']]['name_ar']}** — {st.session_state.user['role']}")
+    st.info(t("الصلاحية الممنوحة: ", "Assigned Permission: ") + company_users[st.session_state.user['name']]["perms"])
+    
+    st.markdown("---")
+    st.subheader(t("📋 جدول صلاحيات أدوار الشركة", "Company Roles & Permissions Table"))
+    
+    # جدول يوضح كل مستخدم وصلاحياته في النظام
+    perms_data = []
+    for k, v in company_users.items():
+        perms_data.append({
+            "المستخدم / User": v["name_ar"],
+            "الدور / Role": v["role"],
+            "الصلاحيات ونطاق العمل / Permissions": v["perms"]
+        })
+    df_perms = pd.DataFrame(perms_data)
+    st.dataframe(df_perms, use_container_width=True)
+    
+    st.markdown("---")
+    st.subheader(t("🛠️ تتبع التعديلات والعمليات الأخيرة للمستخدم", "Track Recent User Modifications & Actions"))
+    
+    # عرض العمليات الخاصة بالمستخدم الحالي فقط من جدول الـ Audit Trail
+    conn = sqlite3.connect(DB_FILE)
+    df_user_actions = pd.read_sql_query(
+        "SELECT action, timestamp FROM audit_trail WHERE username = ? ORDER BY id DESC", 
+        conn, 
+        params=(st.session_state.user["name"],)
+    )
+    conn.close()
+    
+    if not df_user_actions.empty:
+        st.dataframe(df_user_actions, use_container_width=True)
+    else:
+        st.info(t("لا توجد تعديلات أو عمليات مسجلة لهذا المستخدم حتى الآن.", "No logged actions or modifications for this user yet."))
