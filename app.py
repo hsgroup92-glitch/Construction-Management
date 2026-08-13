@@ -16,7 +16,6 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, folder TEXT, uploader TEXT, target TEXT, status TEXT, date TEXT, file_type TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS audit_trail (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT, username TEXT, timestamp TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS system_users (id INTEGER PRIMARY KEY AUTOINCREMENT, fullname TEXT, username TEXT, role TEXT)''')
     conn.commit()
     conn.close()
 
@@ -30,11 +29,12 @@ def log_action(action, username):
     conn.commit()
     conn.close()
 
+# أسماء فريق العمل كما طلبتها بالإنجليزية والعربية
 company_users = {
-    "Hassan ElSokary": {"role": "CEO / المدير التنفيذي", "name_ar": "حسن السكري (المدير التنفيذي)", "perms": "صلاحيات كاملة (إدارة، اعتماد، تعديل، حذف، تصدير)"},
-    "Karim": {"role": "Project Coordinator / منسق مشاريع", "name_ar": "كريم (منسق المشاريع)", "perms": "رفع ومراجعة وتنسيق الملفات والمستندات"},
-    "Site Engineer": {"role": "Site Engineer / مهندس موقع", "name_ar": "مهندس الموقع", "perms": "رفع رسومات وتقارير الموقع والاطلاع عليها"},
-    "Accountant": {"role": "Accountant / المحاسب", "name_ar": "المحاسب", "perms": "الاطلاع على قوائم الكميات والعقود والتقارير المالية"}
+    "Hassan ElSokary": {"role": "CEO", "name_ar": "مهندس/ حسن السكري (CEO)"},
+    "Omar Nour": {"role": "Project Manager", "name_ar": "مهندس/ عمر نور (Project Manager)"},
+    "Mohamed Abdelazim": {"role": "Site Engineer", "name_ar": "مهندس/ محمد عبد العظيم (Site Engineer)"},
+    "Karim Mahmoud": {"role": "Accountant", "name_ar": "محاسب/ كريم محمود (Accountant)"}
 }
 
 if 'user' not in st.session_state: 
@@ -57,14 +57,15 @@ except:
 st.sidebar.markdown("### HS Construction & Supply")
 st.sidebar.markdown("---")
 
+# اختيار المستخدم النشط من القائمة
 selected_user_key = st.sidebar.selectbox(
     t("👤 المستخدم الحالي", "👤 Current User"), 
     list(company_users.keys()),
-    format_func=lambda x: company_users[x]["name_ar"] if st.session_state.lang == "العربية" else x
+    format_func=lambda x: company_users[x]["name_ar"] if st.session_state.lang == "العربية" else f"{x} ({company_users[x]['role']})"
 )
 st.session_state.user = {"name": selected_user_key, "role": company_users[selected_user_key]["role"]}
 
-st.sidebar.write(f"💼 {st.session_state.user['role']}")
+st.sidebar.write(f"💼 Role: {st.session_state.user['role']}")
 st.sidebar.markdown("---")
 
 menu_options = {
@@ -125,8 +126,8 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
         )
         
         target_options = {
-            "العربية": ["مدير المشروع", "مهندس الموقع", "المحاسب", "الإدارة العليا (لي أنا)"],
-            "English": ["Project Manager", "Site Engineer", "Accountant", "Top Management (Me)"]
+            "العربية": ["مدير المشروع (Omar Nour)", "مهندس الموقع (Mohamed Abdelazim)", "المحاسب (Karim Mahmoud)", "الإدارة العليا (Hassan ElSokary)"],
+            "English": ["Project Manager (Omar Nour)", "Site Engineer (Mohamed Abdelazim)", "Accountant (Karim Mahmoud)", "Top Management (Hassan ElSokary)"]
         }
         target_dept = st.selectbox(
             t("الجهة الموجه لها المستند", "Target Department"),
@@ -150,7 +151,7 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
             cursor.execute('''
                 INSERT INTO documents (title, folder, uploader, target, status, date, file_type)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (doc_title, folder_name, st.session_state.user["name"], target_dept, doc_status, str(datetime.date.today()), "ملف"))
+            ''', (doc_title, folder_name, company_users[st.session_state.user["name"]]["name_ar"], target_dept, doc_status, str(datetime.date.today()), "ملف"))
             conn.commit()
             conn.close()
             log_action(f"رفع مستند: {doc_title} موجه إلى {target_dept}", st.session_state.user["name"])
@@ -178,51 +179,13 @@ elif menu in ["سجل النشاطات (Audit Trail)", "Audit Trail"]:
 
 # --- 5. إعداد الصلاحيات ---
 elif menu in ["إعداد الصلاحيات", "Permissions"]:
-    st.title(t("🔐 إدارة صلاحيات المستخدمين", "🔐 Users & Permissions Management"))
+    st.title(t("🔐 صلاحيات فريق العمل", "🔐 Team Permissions"))
     
-    st.markdown(f"### ➕ {t('إضافة مستخدم جديد', 'Add New User')}")
-    with st.form("add_user_form"):
-        new_fullname = st.text_input(t("اسم المستخدم (الاسم الكامل)", "Full Name"))
-        new_username = st.text_input(t("اسم الدخول (Username)", "Username"))
-        new_password = st.text_input(t("كلمة المرور", "Password"), type="password")
-        new_job_title = st.text_input(t("المسمى الوظيفي", "Job Title"))
-        new_role = st.selectbox(t("الدور في النظام", "System Role"), ["CEO", "Project Manager", "Site Engineer", "Accountant"])
-        
-        submit_user = st.form_submit_button(t("إضافة المستخدم", "Add User"))
-        if submit_user and new_fullname:
-            conn = sqlite3.connect(DB_FILE)
-            c = conn.cursor()
-            c.execute("INSERT INTO system_users (fullname, username, role) VALUES (?, ?, ?)", (new_fullname, new_username, new_role))
-            conn.commit()
-            conn.close()
-            log_action(f"إضافة مستخدم جديد: {new_fullname}", st.session_state.user["name"])
-            st.success(t("تم إضافة المستخدم بنجاح!", "User added successfully!"))
-
-    st.markdown("---")
-    st.subheader(t("📋 جدول صلاحيات أدوار الشركة", "Company Roles & Permissions Table"))
-    
-    perms_data = []
-    for k, v in company_users.items():
-        perms_data.append({
-            "المستخدم / User": v["name_ar"],
-            "الدور / Role": v["role"],
-            "الصلاحيات ونطاق العمل / Permissions": v["perms"]
-        })
+    perms_data = [
+        {"Member": "Hassan ElSokary", "Role": "CEO", "Scope": "Full System Access / صلاحيات كاملة"},
+        {"Member": "Omar Nour", "Role": "Project Manager", "Scope": "Project & Drawings Management / إدارة المشاريع والرسومات"},
+        {"Member": "Mohamed Abdelazim", "Role": "Site Engineer", "Scope": "Site Reports & Submissions / تقارير ورفع الموقع"},
+        {"Member": "Karim Mahmoud", "Role": "Accountant", "Scope": "Financials, BOQ & Contracts / الشؤون المالية والعقود"}
+    ]
     df_perms = pd.DataFrame(perms_data)
     st.dataframe(df_perms, use_container_width=True)
-    
-    st.markdown("---")
-    st.subheader(t("🛠️ تتبع التعديلات والعمليات الأخيرة للمستخدم", "Track Recent User Modifications & Actions"))
-    
-    conn = sqlite3.connect(DB_FILE)
-    df_user_actions = pd.read_sql_query(
-        "SELECT action, timestamp FROM audit_trail WHERE username = ? ORDER BY id DESC", 
-        conn, 
-        params=(st.session_state.user["name"],)
-    )
-    conn.close()
-    
-    if not df_user_actions.empty:
-        st.dataframe(df_user_actions, use_container_width=True)
-    else:
-        st.info(t("لا توجد تعديلات أو عمليات مسجلة لهذا المستخدم حتى الآن.", "No logged actions or modifications for this user yet."))
