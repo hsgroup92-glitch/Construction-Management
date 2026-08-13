@@ -1,7 +1,14 @@
 import os
 import json
+import io
 import streamlit as st
 from datetime import datetime
+
+# محاولة استيراد pandas لتصدير ملفات الإكسل
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 st.set_page_config(
     page_title="HS Construction & Supply - Document Management System",
@@ -37,6 +44,8 @@ TRANSLATIONS = {
         "metric_total": "إجمالي المستندات",
         "metric_completed": "المستندات المكتملة",
         "metric_review": "قيد المراجعة",
+        "export_excel_btn": "📊 تصدير تقارير المستندات إلى ملف Excel",
+        "excel_file_name": "HS_Construction_Report.xlsx",
         "folder_lbl": "الفولدر",
         "target_lbl": "موجه إلى",
         "date_lbl": "تاريخ الرفع",
@@ -125,6 +134,8 @@ TRANSLATIONS = {
         "metric_total": "Total Documents",
         "metric_completed": "Completed",
         "metric_review": "Under Review",
+        "export_excel_btn": "📊 Export Documents Report to Excel",
+        "excel_file_name": "HS_Construction_Report.xlsx",
         "folder_lbl": "Folder",
         "target_lbl": "Targeted To",
         "date_lbl": "Upload Date",
@@ -214,7 +225,7 @@ def log_activity(username, action_desc):
         "action": action_desc
     })
     with open(AUDIT_FILE, "w", encoding="utf-8") as f:
-        json.dump(logs[:200], f, ensure_ascii=False, indent=4) # حفظ آخر 200 حركة
+        json.dump(logs[:200], f, ensure_ascii=False, indent=4)
 
 def load_audit_logs():
     if not os.path.exists(AUDIT_FILE):
@@ -390,7 +401,6 @@ else:
         all_files = load_files()
         folders = load_folders()
 
-        # لوحة المؤشرات (Metrics Analytics)
         total_docs = len(all_files)
         completed_docs = len([f for f in all_files if f.get("status") in [t["status_completed"], "Completed", "مكتمل"]])
         review_docs = len([f for f in all_files if f.get("status") in [t["status_review"], "Under Review", "قيد المراجعة"]])
@@ -408,7 +418,6 @@ else:
         else:
             filtered_files = all_files
 
-        # أدوات التصفية والبحث المتقدم
         col_f1, col_f2 = st.columns([1, 2])
         with col_f1:
             selected_folder_filter = st.selectbox(t["filter_folder"], [t["all"]] + folders)
@@ -418,6 +427,33 @@ else:
             search_query = st.text_input(t["search_box"])
             if search_query:
                 filtered_files = [f for f in filtered_files if search_query.lower() in f.get("title", "").lower() or search_query.lower() in f.get("uploader", "").lower() or any(search_query.lower() in t_item.lower() for t_item in f.get("target", []))]
+
+        # زر تصدير تقارير الـ Excel إذا توفرت مكتبة pandas ومطابقة الملفات
+        if pd and filtered_files:
+            excel_buffer = io.BytesIO()
+            report_data = []
+            for f_item in filtered_files:
+                report_data.append({
+                    "Title": f_item.get("title"),
+                    "Folder": f_item.get("folder"),
+                    "Uploader": f_item.get("uploader"),
+                    "Target": ", ".join(f_item.get("target", [])) if isinstance(f_item.get("target"), list) else f_item.get("target"),
+                    "Status": f_item.get("status"),
+                    "Date": f_item.get("date"),
+                    "File Type": f_item.get("file_type")
+                })
+            df_report = pd.DataFrame(report_data)
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                df_report.to_excel(writer, index=False, sheet_name='Documents_Report')
+            excel_data = excel_buffer.getvalue()
+
+            st.download_button(
+                label=t["export_excel_btn"],
+                data=excel_data,
+                file_name=t["excel_file_name"],
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            st.markdown("---")
 
         st.subheader(f"{t['files_count']} ({len(filtered_files)})")
 
