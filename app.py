@@ -49,11 +49,9 @@ if 'lang' not in st.session_state: st.session_state.lang = "العربية"
 def t(ar, en): return ar if st.session_state.lang == "العربية" else en
 
 # --- القائمة الجانبية ---
-# 1. زر اللغة فوق خالص
 st.session_state.lang = st.sidebar.selectbox("🌐 Language / اللغة", ["العربية", "English"])
 st.sidebar.markdown("---")
 
-# 2. اللوجو وبيانات المستخدم
 try:
     img = Image.open("logo.jpg.png")
     st.sidebar.image(img, use_container_width=True)
@@ -65,14 +63,12 @@ st.sidebar.write(f"👤 {st.session_state.user['name']}")
 st.sidebar.write(f"💼 ({st.session_state.user['role']})")
 st.sidebar.markdown("---")
 
-# 3. القائمة الرئيسية
 menu_options = {
     "العربية": ["لوحة التحكم والتحليلات", "إدارة الملفات الجديدة", "إدارة الفولدرات", "سجل النشاطات (Audit Trail)", "إعداد الصلاحيات"],
     "English": ["Dashboard & Analytics", "Manage New Files", "Manage Folders", "Audit Trail", "Permissions"]
 }
 menu = st.sidebar.radio(t("القائمة الرئيسية", "Main Menu"), menu_options[st.session_state.lang])
 
-# 4. زر تسجيل الخروج في الأسفل تماماً
 st.sidebar.markdown("---")
 if st.sidebar.button(t("🚪 تسجيل الخروج", "🚪 Logout")):
     st.stop()
@@ -117,10 +113,31 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
     
     with st.form("upload_form"):
         doc_title = st.text_input(t("عنوان المستند / المشروع", "Document / Project Title"))
-        folder_name = st.selectbox(t("اختر الفولدر", "Select Folder"), ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"])
-        target_dept = st.text_input(t("الجهة الموجه لها المستند", "Target Department"))
-        doc_status = st.selectbox(t("حالة المستند", "Document Status"), ["مسودة", "قيد المراجعة", "معتمد"])
-        uploaded_file = st.file_uploader(t("اختر الملف", "Choose File"), type=["pdf", "png", "jpg", "xlsx", "xls", "dwg"])
+        
+        folder_name = st.selectbox(
+            t("اختر الفولدر", "Select Folder"), 
+            ["الرسومات التنفيذية", "قوائم الكميات والأسعار", "العقود ومقاول الباطن", "الاعتمادات الاستشارية"]
+        )
+        
+        # القائمة المنسدلة للجهة الموجه لها المستند (بالأسماء المطلوبة)
+        target_options = {
+            "العربية": ["مدير المشروع", "مهندس الموقع", "المحاسب", "الإدارة العليا (لي أنا)"],
+            "English": ["Project Manager", "Site Engineer", "Accountant", "Top Management (Me)"]
+        }
+        target_dept = st.selectbox(
+            t("الجهة الموجه لها المستند", "Target Department"),
+            target_options[st.session_state.lang]
+        )
+        
+        doc_status = st.selectbox(
+            t("حالة المستند", "Document Status"), 
+            ["مسودة", "قيد المراجعة", "معتمد"]
+        )
+        
+        uploaded_file = st.file_uploader(
+            t("اختر الملف", "Choose File"), 
+            type=["pdf", "png", "jpg", "xlsx", "xls", "dwg"]
+        )
         
         submit_btn = st.form_submit_button(t("حفظ ورفع المستند", "Save and Upload Document"))
         if submit_btn and doc_title:
@@ -132,7 +149,7 @@ elif menu in ["إدارة الملفات الجديدة", "Manage New Files"]:
             ''', (doc_title, folder_name, st.session_state.user["name"], target_dept, doc_status, str(datetime.date.today()), "ملف"))
             conn.commit()
             conn.close()
-            log_action(f"رفع مستند: {doc_title}", st.session_state.user["name"])
+            log_action(f"رفع مستند: {doc_title} موجه إلى {target_dept}", st.session_state.user["name"])
             st.success(t("تم الحفظ بنجاح!", "Saved successfully!"))
 
 
@@ -151,7 +168,7 @@ elif menu in ["سجل النشاطات (Audit Trail)", "Audit Trail"]:
     df_audit = pd.read_sql_query("SELECT * FROM audit_trail ORDER BY id DESC", conn)
     conn.close()
     if not df_audit.empty:
-        st.dataframe(df_audit, use_command_bar=True, use_container_width=True)
+        st.dataframe(df_audit, use_container_width=True)
     else:
         st.info(t("لا توجد نشاطات مسجلة حتى الآن.", "No audit logs recorded yet."))
 
